@@ -80,12 +80,14 @@ public class App implements CommandLineRunner {
     @Transactional
     private void handleNewTransaction(Transaction transaction) {
         // write into DDB
+        transactionRepository.save(transaction);
         sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()));
     }
 
     @Transactional
     private void handleUpdatedTransaction(Transaction transaction) {
         // update DDB
+        transactionRepository.save(transaction);
         sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE, getCurrentDate()));
     }
 
