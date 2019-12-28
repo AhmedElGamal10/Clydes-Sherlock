@@ -2,8 +2,7 @@ package com.example.demo;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
@@ -23,14 +22,16 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
 public class App implements CommandLineRunner {
 
     private static final Logger logger = LogManager.getLogger(App.class);
     private DynamoDBMapper dynamoDBMapper;
+    private final static double EPS = 1e-7;
 
     @Autowired
     private AmazonDynamoDB amazonDynamoDB;
@@ -44,61 +45,95 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        List<User> systemUsers = makeGetUsersRequest();
+        initializeDynamoDB();
 
+        insertAndLogForDevelopment();
+
+        List<User> systemUsers = sendGetUsersRequest();
         for (User user : systemUsers) {
-            List<Transaction> userTransactions = sendTransactionsRequest(user);
+            List<Transaction> userTransactions = sendGetUserTransactionsRequest(user);
+            List<Transaction> savedTransactions = getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
 
-//            List<Transaction> savedUserTransactions = queryUserTransactions(user);
-
-//            //Query DB for this user's transactions that has occurred during last 5 days
-//
-//            // take the proper action for each transaction:
-//            // insert/event -- update/event - do nothing
+            Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
+            for (Transaction remoteTransaction : userTransactions) {
+                if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
+                    // write into DDB and produce event
+                } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {
+                    // update DDB and produce event
+                }
+            }
         }
-        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
+    }
 
-        CreateTableRequest tableRequest = dynamoDBMapper
-                .generateCreateTableRequest(Transaction.class);
-//        DeleteTableRequest deleteTableRequest = dynamoDBMapper.generateDeleteTableRequest(Transaction.class);
+    private boolean transactionHasChanged(Transaction remoteTransaction, Transaction localTransaction) {
+        return remoteTransaction.getCreated().equals(localTransaction.getCreated()) &&
+                remoteTransaction.getState().equals(localTransaction.getState()) &&
+                remoteTransaction.getUserId().equals(localTransaction.getUserId()) &&
+                remoteTransaction.getAmount() - localTransaction.getAmount() < EPS;
+    }
 
-        tableRequest.setProvisionedThroughput(
-                new ProvisionedThroughput(1L, 1L));
-        tableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10l, 10l));
-
-//        TableUtils.deleteTableIfExists(amazonDynamoDB, deleteTableRequest);
-        TableUtils.createTableIfNotExists(amazonDynamoDB, tableRequest);
-
+    /* Temporarily for development */
+    private void insertAndLogForDevelopment() {
         Transaction transaction = new Transaction();
         transaction.setAmount(50.8);
-        transaction.setCreated("2019-12-30");
-        transaction.setId("transaction_3");
+        transaction.setCreated("2019-12-27");
+        transaction.setId("transaction_5");
         transaction.setState("AUTHORIZED");
-        transaction.setUserId("user_1");
-
+        transaction.setUserId("user_2");
         transaction = transactionRepository.save(transaction);
 
         logger.info("Saved Transaction object: " + new Gson().toJson(transaction));
 
-//        UserTransactionsIndexKey userTransactionsIndexKey = new UserTransactionsIndexKey();
-//        userTransactionsIndexKey.setCreated(transaction.getCreated());
-//        userTransactionsIndexKey.setId(transaction.getId());
-
         Optional<Transaction> transactionQueried = transactionRepository.findById(transaction.getId());
-
         if (transactionQueried.get() != null) {
             logger.info("Queried object: " + new Gson().toJson(transactionQueried.get()));
         }
 
         Iterable<Transaction> transactions = transactionRepository.findAll();
-
         for (Transaction transactionObject : transactions) {
             logger.info("List object: " + new Gson().toJson(transactionObject));
         }
     }
 
-    private List<Transaction> sendTransactionsRequest(User user) {
-        String uri = buildTransactionsUri(user);
+    private void initializeDynamoDB() {
+        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
+
+        CreateTableRequest createTableRequest = dynamoDBMapper
+                .generateCreateTableRequest(Transaction.class);
+
+        createTableRequest.setProvisionedThroughput(
+                new ProvisionedThroughput(10L, 10L));
+        createTableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10L, 10L));
+
+        TableUtils.createTableIfNotExists(amazonDynamoDB, createTableRequest);
+    }
+
+    private List<Transaction> getUserTransactions(User user, String fiveDaysAgoDate, String currentDate) {
+        Map<String, String> expressionAttributesNames = new HashMap<>();
+        expressionAttributesNames.put("#userId", "userId");
+        expressionAttributesNames.put("#created", "created");
+
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":userId", new AttributeValue().withS(user.getId()));
+        expressionAttributeValues.put(":fiveDaysAgoDate", new AttributeValue().withS(fiveDaysAgoDate));
+        expressionAttributeValues.put(":currentDate", new AttributeValue().withS(currentDate));
+
+        QueryRequest queryRequest = new QueryRequest()
+                .withTableName("transactions")
+                .withKeyConditionExpression("#userId = :userId and #created between :fiveDaysAgoDate and :currentDate ")
+                .withIndexName("userTransactions-index")
+                .withExpressionAttributeNames(expressionAttributesNames)
+                .withExpressionAttributeValues(expressionAttributeValues);
+
+        QueryResult queryResult = amazonDynamoDB.query(queryRequest);
+
+        List<Transaction> unmarshalledQueryResult = dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult.getItems());
+
+        return unmarshalledQueryResult;
+    }
+
+    private List<Transaction> sendGetUserTransactionsRequest(User user) {
+        String uri = buildUserTransactionsRequestPath(user);
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<List<Transaction>> userTransactionsResponse =
                 restTemplate.exchange(uri,
@@ -108,7 +143,7 @@ public class App implements CommandLineRunner {
         return userTransactions;
     }
 
-    private List<User> makeGetUsersRequest() {
+    private List<User> sendGetUsersRequest() {
         final String uri = "http://localhost:8081/clydescards.example.com/users";
 
         RestTemplate restTemplate = new RestTemplate();
@@ -121,14 +156,11 @@ public class App implements CommandLineRunner {
         return users;
     }
 
-    private String buildTransactionsUri(User user) {
+    private String buildUserTransactionsRequestPath(User user) {
         final String baseUri = "http://localhost:8081/clydescards.example.com/transactions?userId=";
 
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate today = LocalDate.now();
-
-        String currentDate = dtf.format(today);
-        String fiveDaysAgoDate = dtf.format(today.plusDays(-5));
+        String currentDate = getCurrentDate();
+        String fiveDaysAgoDate = getPastDateByDifferenceInDays(5);
 
         StringBuilder sb = new StringBuilder();
         sb.append(baseUri);
@@ -143,5 +175,16 @@ public class App implements CommandLineRunner {
         sb.append(fiveDaysAgoDate);
 
         return sb.toString();
+    }
+
+    private String getCurrentDate() {
+        return getPastDateByDifferenceInDays(0);
+    }
+
+    private String getPastDateByDifferenceInDays(int differenceInDays) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate today = LocalDate.now();
+
+        return dtf.format(today.plusDays(-1 * differenceInDays));
     }
 }
