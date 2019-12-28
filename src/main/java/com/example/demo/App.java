@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
 import com.example.demo.repositories.TransactionRepository;
+import com.example.demo.service.KafkaSender;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
@@ -40,6 +41,9 @@ public class App implements CommandLineRunner {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private KafkaSender kafkaSender;
+
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
     }
@@ -54,6 +58,7 @@ public class App implements CommandLineRunner {
         insertAndLogForDevelopment();
 
         while(true) {
+            kafkaSender.send("msg");
             List<User> systemUsers = sendGetUsersRequest(rateLimiter);
             for (User user : systemUsers) {
                 List<Transaction> userTransactions = sendGetUserTransactionsRequest(user, rateLimiter);
