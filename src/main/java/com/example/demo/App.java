@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.AwsService;
 import com.example.demo.model.Transaction;
+import com.example.demo.model.TransactionId;
 import com.example.demo.model.User;
 import com.example.demo.repositories.AwsServiceRepository;
 import com.example.demo.repositories.TransactionRepository;
@@ -52,11 +53,8 @@ public class App implements CommandLineRunner {
         List<User> systemUsers = makeGetUsersRequest();
 
         for (User user : systemUsers) {
-            System.out.println(user);
             List<Transaction> userTransactions = sendTransactionsRequest(user);
-            for(Transaction transaction : userTransactions){
-                System.out.println(transaction);
-            }
+
 //            List<Transaction> savedUserTransactions = queryUserTransactions(user);
 
 //            //Query DB for this user's transactions that has occurred during last 5 days
@@ -67,36 +65,37 @@ public class App implements CommandLineRunner {
         dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
 
         CreateTableRequest tableRequest = dynamoDBMapper
-                .generateCreateTableRequest(AwsService.class);
+                .generateCreateTableRequest(Transaction.class);
 
         tableRequest.setProvisionedThroughput(
                 new ProvisionedThroughput(1L, 1L));
 
         TableUtils.createTableIfNotExists(amazonDynamoDB, tableRequest);
 
-        AwsService awsService = new AwsService();
+        Transaction transaction = new Transaction();
+        transaction.setAmount(50.8);
+        transaction.setCreated("2019-12-30");
+        transaction.setId("transaction_3");
+        transaction.setState("AUTHORIZED");
 
-        awsService.setServiceName("AWS DynamoDB");
-        awsService.setServiceHomePageUrl("https://aws.amazon.com/dynamodb/?nc2=h_m1");
+        transaction = transactionRepository.save(transaction);
 
-        awsService = awsServiceRepository.save(awsService);
+        logger.info("Saved Transaction object: " + new Gson().toJson(transaction));
 
-        logger.info("Saved AwsService object: " + new Gson().toJson(awsService));
+        TransactionId transactionId = new TransactionId();
+        transactionId.setCreated(transaction.getCreated());
+        transactionId.setId(transaction.getId());
 
-        String awsServiceId = awsService.getId();
+        Optional<Transaction> transactionQueried = transactionRepository.findById(transactionId);
 
-        logger.info("AWS Service ID: " + awsServiceId);
-
-        Optional<AwsService> awsServiceQueried = awsServiceRepository.findById(awsServiceId);
-
-        if (awsServiceQueried.get() != null) {
-            logger.info("Queried object: " + new Gson().toJson(awsServiceQueried.get()));
+        if (transactionQueried.get() != null) {
+            logger.info("Queried object: " + new Gson().toJson(transactionQueried.get()));
         }
 
-        Iterable<AwsService> awsServices = awsServiceRepository.findAll();
+        Iterable<Transaction> transactions = transactionRepository.findAll();
 
-        for (AwsService awsServiceObject : awsServices) {
-            logger.info("List object: " + new Gson().toJson(awsServiceObject));
+        for (Transaction transactionObject : transactions) {
+            logger.info("List object: " + new Gson().toJson(transactionObject));
         }
     }
 
@@ -109,6 +108,19 @@ public class App implements CommandLineRunner {
                         });
         List<Transaction> userTransactions = userTransactionsResponse.getBody();
         return userTransactions;
+    }
+
+    private List<User> makeGetUsersRequest() {
+        final String uri = "http://localhost:8081/clydescards.example.com/users";
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<List<User>> usersResponse =
+                restTemplate.exchange(uri,
+                        HttpMethod.GET, null, new ParameterizedTypeReference<List<User>>() {
+                        });
+        List<User> users = usersResponse.getBody();
+
+        return users;
     }
 
     private String buildTransactionsUri(User user) {
@@ -133,18 +145,5 @@ public class App implements CommandLineRunner {
         sb.append(fiveDaysAgoDate);
 
         return sb.toString();
-    }
-
-    private List<User> makeGetUsersRequest() {
-        final String uri = "http://localhost:8081/clydescards.example.com/users";
-
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<List<User>> usersResponse =
-                restTemplate.exchange(uri,
-                        HttpMethod.GET, null, new ParameterizedTypeReference<List<User>>() {
-                        });
-        List<User> users = usersResponse.getBody();
-
-        return users;
     }
 }
