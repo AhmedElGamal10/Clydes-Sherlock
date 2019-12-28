@@ -8,3 +8,4 @@
 * Clone the fake server repo:  `git clone https://github.com/AhmedElGamal10/clydescards.git` 
 * Clone this repo: `git clone https://github.com/AhmedElGamal10/async-events-system.git`
 * Get both services (fake server and async-events-system) up using IntelliJ (as a temporary solution until getting a script for it).
+* Run Kafka server according using last lines in this page: https://www.javainuse.com/spring/spring-boot-apache-kafka-hello-world
