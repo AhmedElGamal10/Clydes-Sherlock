@@ -3,7 +3,7 @@ package com.example.demo.kafka;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.example.demo.model.Transaction;
+import com.example.demo.model.TransactionEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,12 +32,12 @@ public class SenderConfig {
     }
 
     @Bean
-    public ProducerFactory<String, Transaction> producerFactory() {
+    public ProducerFactory<String, TransactionEvent> producerFactory() {
         return new DefaultKafkaProducerFactory<>(producerConfigs());
     }
 
     @Bean
-    public KafkaTemplate<String, Transaction> kafkaTemplate() {
+    public KafkaTemplate<String, TransactionEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 

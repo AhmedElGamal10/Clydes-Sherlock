@@ -1,6 +1,7 @@
 package com.example.demo.model;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import lombok.AllArgsConstructor;
 import org.springframework.data.annotation.Id;
 
 @DynamoDBTable(tableName = "transactions")
@@ -14,6 +15,15 @@ public class Transaction {
     private Double amount;
 
     private String state;
+
+    public Transaction() {}
+    public Transaction(Transaction transaction) {
+        this.amount = transaction.getAmount();
+        this.state = transaction.getState();
+        this.id = transaction.getId();
+        this.setUserId(transaction.getUserId());
+        this.setCreated(transaction.getCreated());
+    }
 
     @DynamoDBHashKey
     public String getId() {

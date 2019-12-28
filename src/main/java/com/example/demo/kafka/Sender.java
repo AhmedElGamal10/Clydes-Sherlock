@@ -1,6 +1,6 @@
 package com.example.demo.kafka;
 
-import com.example.demo.model.Transaction;
+import com.example.demo.model.TransactionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,10 +15,10 @@ public class Sender {
     private String jsonTopic;
 
     @Autowired
-    private KafkaTemplate<String, Transaction> kafkaTemplate;
+    private KafkaTemplate<String, TransactionEvent> kafkaTemplate;
 
-    public void send(Transaction transaction) {
-        LOGGER.info("sending transaction='{}'", transaction.toString());
-        kafkaTemplate.send(jsonTopic, transaction);
+    public void send(TransactionEvent transactionEvent) {
+        LOGGER.info("sending transaction event='{}'", transactionEvent.toString());
+        kafkaTemplate.send(jsonTopic, transactionEvent);
     }
 }

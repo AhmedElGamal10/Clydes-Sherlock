@@ -6,6 +6,7 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.kafka.Sender;
 import com.example.demo.model.Transaction;
+import com.example.demo.model.TransactionEvent;
 import com.example.demo.model.User;
 import com.example.demo.repositories.TransactionRepository;
 import com.google.common.util.concurrent.RateLimiter;
@@ -65,7 +66,8 @@ public class App implements CommandLineRunner {
                 Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
                 for (Transaction remoteTransaction : userTransactions) {
                     remoteTransaction.setUserId(user.getId());
-                    sender.send(remoteTransaction);
+//                    sender.send(remoteTransaction);
+                    sender.send(new TransactionEvent(remoteTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()));
                     if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
                         // write into DDB and produce event
                     } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {
