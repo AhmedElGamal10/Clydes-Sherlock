@@ -15,3 +15,6 @@ https://medium.com/@contactsunny/integrate-aws-dynamodb-with-spring-boot-687cfaa
 https://howtodoinjava.com/spring-boot2/resttemplate/spring-restful-client-resttemplate-example/
 
 https://www.baeldung.com/java-url-encoding-decoding
+
+https://dzone.com/articles/detailed-explanation-of-guava-ratelimiters-throttl
+https://www.baeldung.com/guava-rate-limiter

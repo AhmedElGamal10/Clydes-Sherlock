@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
 import com.example.demo.repositories.TransactionRepository;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,19 +48,24 @@ public class App implements CommandLineRunner {
     public void run(String... strings) throws Exception {
         initializeDynamoDB();
 
+        /* 1 */
+        RateLimiter rateLimiter = RateLimiter.create(2);
+
         insertAndLogForDevelopment();
 
-        List<User> systemUsers = sendGetUsersRequest();
-        for (User user : systemUsers) {
-            List<Transaction> userTransactions = sendGetUserTransactionsRequest(user);
-            List<Transaction> savedTransactions = getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+        while(true) {
+            List<User> systemUsers = sendGetUsersRequest(rateLimiter);
+            for (User user : systemUsers) {
+                List<Transaction> userTransactions = sendGetUserTransactionsRequest(user, rateLimiter);
+                List<Transaction> savedTransactions = getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
 
-            Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
-            for (Transaction remoteTransaction : userTransactions) {
-                if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
-                    // write into DDB and produce event
-                } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {
-                    // update DDB and produce event
+                Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
+                for (Transaction remoteTransaction : userTransactions) {
+                    if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
+                        // write into DDB and produce event
+                    } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {
+                        // update DDB and produce event
+                    }
                 }
             }
         }
@@ -132,7 +138,10 @@ public class App implements CommandLineRunner {
         return unmarshalledQueryResult;
     }
 
-    private List<Transaction> sendGetUserTransactionsRequest(User user) {
+    private List<Transaction> sendGetUserTransactionsRequest(User user, RateLimiter rateLimiter) {
+//        rateLimiter.acquire();
+        System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
+
         String uri = buildUserTransactionsRequestPath(user);
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<List<Transaction>> userTransactionsResponse =
@@ -143,7 +152,10 @@ public class App implements CommandLineRunner {
         return userTransactions;
     }
 
-    private List<User> sendGetUsersRequest() {
+    private List<User> sendGetUsersRequest(RateLimiter rateLimiter) {
+//        rateLimiter.acquire();
+        System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
+
         final String uri = "http://localhost:8081/clydescards.example.com/users";
 
         RestTemplate restTemplate = new RestTemplate();
