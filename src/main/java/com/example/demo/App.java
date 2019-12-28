@@ -5,11 +5,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
-import com.example.demo.model.AwsService;
 import com.example.demo.model.Transaction;
-import com.example.demo.model.TransactionId;
 import com.example.demo.model.User;
-import com.example.demo.repositories.AwsServiceRepository;
 import com.example.demo.repositories.TransactionRepository;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
@@ -39,9 +36,6 @@ public class App implements CommandLineRunner {
     private AmazonDynamoDB amazonDynamoDB;
 
     @Autowired
-    private AwsServiceRepository awsServiceRepository;
-
-    @Autowired
     private TransactionRepository transactionRepository;
 
     public static void main(String[] args) {
@@ -66,11 +60,13 @@ public class App implements CommandLineRunner {
 
         CreateTableRequest tableRequest = dynamoDBMapper
                 .generateCreateTableRequest(Transaction.class);
+//        DeleteTableRequest deleteTableRequest = dynamoDBMapper.generateDeleteTableRequest(Transaction.class);
 
         tableRequest.setProvisionedThroughput(
                 new ProvisionedThroughput(1L, 1L));
         tableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10l, 10l));
 
+//        TableUtils.deleteTableIfExists(amazonDynamoDB, deleteTableRequest);
         TableUtils.createTableIfNotExists(amazonDynamoDB, tableRequest);
 
         Transaction transaction = new Transaction();
@@ -78,16 +74,17 @@ public class App implements CommandLineRunner {
         transaction.setCreated("2019-12-30");
         transaction.setId("transaction_3");
         transaction.setState("AUTHORIZED");
+        transaction.setUserId("user_1");
 
         transaction = transactionRepository.save(transaction);
 
         logger.info("Saved Transaction object: " + new Gson().toJson(transaction));
 
-        TransactionId transactionId = new TransactionId();
-        transactionId.setCreated(transaction.getCreated());
-        transactionId.setId(transaction.getId());
+//        UserTransactionsIndexKey userTransactionsIndexKey = new UserTransactionsIndexKey();
+//        userTransactionsIndexKey.setCreated(transaction.getCreated());
+//        userTransactionsIndexKey.setId(transaction.getId());
 
-        Optional<Transaction> transactionQueried = transactionRepository.findById(transactionId);
+        Optional<Transaction> transactionQueried = transactionRepository.findById(transaction.getId());
 
         if (transactionQueried.get() != null) {
             logger.info("Queried object: " + new Gson().toJson(transactionQueried.get()));

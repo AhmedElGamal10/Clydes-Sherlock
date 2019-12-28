@@ -5,42 +5,44 @@ import org.springframework.data.annotation.Id;
 
 @DynamoDBTable(tableName = "transactions")
 public class Transaction {
+
+    private UserTransactionsIndexKey userTransactionsIndexKey;
+
     @Id
-    private TransactionId transactionId;
+    private String id;
 
     private Double amount;
-    private String userId;
+
     private String state;
-
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "userTransactions-index")
-    public String getUserId() {
-        return userId;
-    }
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
 
     @DynamoDBHashKey
     public String getId() {
-        return transactionId != null ? transactionId.getId() : null;
+        return id;
     }
     public void setId(String id) {
-        if (transactionId == null) {
-            transactionId = new TransactionId();
-        }
-        transactionId.setId(id);
+        this.id = id;
     }
 
-    @DynamoDBRangeKey
+    @DynamoDBIndexHashKey(globalSecondaryIndexName = "userTransactions-index")
+    public String getUserId() {
+        return userTransactionsIndexKey != null ? userTransactionsIndexKey.getUserId() : null;
+    }
+    public void setUserId(String userId) {
+        if (userTransactionsIndexKey == null) {
+            userTransactionsIndexKey = new UserTransactionsIndexKey();
+        }
+        userTransactionsIndexKey.setUserId(userId);
+    }
+
+    @DynamoDBIndexRangeKey(globalSecondaryIndexName = "userTransactions-index")
     public String getCreated() {
-        return transactionId != null ? transactionId.getCreated() : null;
+        return userTransactionsIndexKey != null ? userTransactionsIndexKey.getCreated() : null;
     }
     public void setCreated(String created) {
-        if (transactionId == null) {
-            transactionId = new TransactionId();
+        if (userTransactionsIndexKey == null) {
+            userTransactionsIndexKey = new UserTransactionsIndexKey();
         }
-        transactionId.setCreated(created);
+        userTransactionsIndexKey.setCreated(created);
     }
 
     @DynamoDBAttribute
