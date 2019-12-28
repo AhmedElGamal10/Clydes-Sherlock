@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
@@ -66,16 +67,26 @@ public class App implements CommandLineRunner {
                 Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
                 for (Transaction remoteTransaction : userTransactions) {
                     remoteTransaction.setUserId(user.getId());
-//                    sender.send(remoteTransaction);
-                    sender.send(new TransactionEvent(remoteTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()));
                     if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
-                        // write into DDB and produce event
+                        handleNewTransaction(remoteTransaction);
                     } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {
-                        // update DDB and produce event
+                        handleUpdatedTransaction(remoteTransaction);
                     }
                 }
             }
         }
+    }
+
+    @Transactional
+    private void handleNewTransaction(Transaction transaction) {
+        // write into DDB
+        sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()));
+    }
+
+    @Transactional
+    private void handleUpdatedTransaction(Transaction transaction) {
+        // update DDB
+        sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE, getCurrentDate()));
     }
 
     private boolean transactionHasChanged(Transaction remoteTransaction, Transaction localTransaction) {
