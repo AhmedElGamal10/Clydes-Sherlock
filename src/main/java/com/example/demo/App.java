@@ -6,6 +6,7 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.AwsService;
+import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
 import com.example.demo.repositories.AwsServiceRepository;
 import com.example.demo.repositories.TransactionRepository;
@@ -16,9 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 //import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,12 +50,20 @@ public class App implements CommandLineRunner {
     @Override
     public void run(String... strings) throws Exception {
         List<User> systemUsers = makeGetUsersRequest();
-//        for (User user : systemUsers) {
-////            //Query DB for this user's transactions that has occurred during last 5 days
-////
-////            // take the proper action for each transaction:
-////            // insert/event -- update/event - do nothing
-////        }
+
+        for (User user : systemUsers) {
+            System.out.println(user);
+            List<Transaction> userTransactions = sendTransactionsRequest(user);
+            for(Transaction transaction : userTransactions){
+                System.out.println(transaction);
+            }
+//            List<Transaction> savedUserTransactions = queryUserTransactions(user);
+
+//            //Query DB for this user's transactions that has occurred during last 5 days
+//
+//            // take the proper action for each transaction:
+//            // insert/event -- update/event - do nothing
+        }
         dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
 
         CreateTableRequest tableRequest = dynamoDBMapper
@@ -86,13 +100,51 @@ public class App implements CommandLineRunner {
         }
     }
 
+    private List<Transaction> sendTransactionsRequest(User user) {
+        String uri = buildTransactionsUri(user);
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<List<Transaction>> userTransactionsResponse =
+                restTemplate.exchange(uri,
+                        HttpMethod.GET, null, new ParameterizedTypeReference<List<Transaction>>() {
+                        });
+        List<Transaction> userTransactions = userTransactionsResponse.getBody();
+        return userTransactions;
+    }
+
+    private String buildTransactionsUri(User user) {
+        final String baseUri = "http://localhost:8081/clydescards.example.com/transactions?userId=";
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate today = LocalDate.now();
+
+        String currentDate = dtf.format(today);
+        String fiveDaysAgoDate = dtf.format(today.plusDays(-5));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(baseUri);
+        sb.append(user.getId());
+
+        sb.append("&");
+        sb.append("startDate=");
+        sb.append(currentDate);
+
+        sb.append("&");
+        sb.append("endDate=");
+        sb.append(fiveDaysAgoDate);
+
+        return sb.toString();
+    }
+
     private List<User> makeGetUsersRequest() {
         final String uri = "http://localhost:8081/clydescards.example.com/users";
 
         RestTemplate restTemplate = new RestTemplate();
-        List<User> result = restTemplate.getForObject(uri, List.class);
+        ResponseEntity<List<User>> usersResponse =
+                restTemplate.exchange(uri,
+                        HttpMethod.GET, null, new ParameterizedTypeReference<List<User>>() {
+                        });
+        List<User> users = usersResponse.getBody();
 
-        System.out.println(result);
-        return result;
+        return users;
     }
 }

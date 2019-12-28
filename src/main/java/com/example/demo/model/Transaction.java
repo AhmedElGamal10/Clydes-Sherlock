@@ -1,40 +1,43 @@
 package com.example.demo.model;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import org.springframework.data.annotation.Id;
 
 @DynamoDBTable(tableName = "transactions")
 public class Transaction {
-
-    private String transactionId;
+    @Id
+    private TransactionId transactionId;
     private String state;
-    private String created;
     private Double amount;
 
     @DynamoDBHashKey
-    public String getTransactionId() {
-        return transactionId;
+    public String getId() {
+        return transactionId != null ? transactionId.getId() : null;
+    }
+    public void setId(String id) {
+        if (transactionId == null) {
+            transactionId = new TransactionId();
+        }
+        transactionId.setId(id);
     }
 
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
+    @DynamoDBRangeKey
+    public String getCreated() {
+        return transactionId != null ? transactionId.getCreated() : null;
+    }
+    public void setCreated(String created) {
+        if (transactionId == null) {
+            transactionId = new TransactionId();
+        }
+        transactionId.setCreated(created);
     }
 
     @DynamoDBAttribute
     public String getState() {
         return state;
     }
-
     public void setState(String state) {
         this.state = state;
-    }
-
-    @DynamoDBAttribute
-    public String getCreated() {
-        return created;
-    }
-
-    public void setCreated(String created) {
-        this.created = created;
     }
 
     @DynamoDBAttribute
