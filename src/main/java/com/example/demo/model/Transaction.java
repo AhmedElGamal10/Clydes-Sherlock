@@ -7,8 +7,19 @@ import org.springframework.data.annotation.Id;
 public class Transaction {
     @Id
     private TransactionId transactionId;
-    private String state;
+
     private Double amount;
+    private String userId;
+    private String state;
+
+    @DynamoDBIndexHashKey(globalSecondaryIndexName = "userTransactions-index")
+    public String getUserId() {
+        return userId;
+    }
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
 
     @DynamoDBHashKey
     public String getId() {

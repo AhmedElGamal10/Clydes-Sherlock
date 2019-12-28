@@ -69,6 +69,7 @@ public class App implements CommandLineRunner {
 
         tableRequest.setProvisionedThroughput(
                 new ProvisionedThroughput(1L, 1L));
+        tableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10l, 10l));
 
         TableUtils.createTableIfNotExists(amazonDynamoDB, tableRequest);
 
