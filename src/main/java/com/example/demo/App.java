@@ -48,7 +48,7 @@ public class App implements CommandLineRunner {
     public void run(String... strings) throws Exception {
         initializeDynamoDB();
 
-        /* 1 */
+        /* Set rate to 2 requests per second .. to be increased to 200 (as required) later */
         RateLimiter rateLimiter = RateLimiter.create(2);
 
         insertAndLogForDevelopment();

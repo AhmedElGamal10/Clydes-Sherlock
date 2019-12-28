@@ -1,20 +1,9 @@
-# Spring Boot Amazon DynamoDB POC
-This is a simple Spring Boot CommandLineRunner application to illustrate how we can use the AWS Java SDK to write objects to DynamoDB and read objects from the DB.
+# Draft README to get the project up and running
 
-
-cd ~/Downloads/dynamodb_local_latest/
-java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
-
-
-https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html
-https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.Maven.html
-
-https://www.baeldung.com/spring-data-dynamodb
-https://medium.com/@contactsunny/integrate-aws-dynamodb-with-spring-boot-687cfaabfaa0
-
-https://howtodoinjava.com/spring-boot2/resttemplate/spring-restful-client-resttemplate-example/
-
-https://www.baeldung.com/java-url-encoding-decoding
-
-https://dzone.com/articles/detailed-explanation-of-guava-ratelimiters-throttl
-https://www.baeldung.com/guava-rate-limiter
+* Get DynamoDB running locally in two steps:
+    * Download LocalDynamoDB jar from [here](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html)
+    * Navigate to where the jar was downloaded.
+    * Run the jar with `java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb`
+* Clone the fake server repo:  `git clone https://github.com/AhmedElGamal10/clydescards.git` 
+* Clone this repo: `git clone https://github.com/AhmedElGamal10/async-events-system.git`
+* Get both services (fake server and async-events-system) up using IntelliJ (as a temporary solution until getting a script for it).
