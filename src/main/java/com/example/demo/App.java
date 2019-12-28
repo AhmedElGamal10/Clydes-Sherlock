@@ -4,10 +4,10 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
+import com.example.demo.kafka.Sender;
 import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
 import com.example.demo.repositories.TransactionRepository;
-import com.example.demo.service.KafkaSender;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
@@ -20,7 +20,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
-//import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -42,7 +41,7 @@ public class App implements CommandLineRunner {
     private TransactionRepository transactionRepository;
 
     @Autowired
-    private KafkaSender kafkaSender;
+    private Sender sender;
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
@@ -58,7 +57,6 @@ public class App implements CommandLineRunner {
         insertAndLogForDevelopment();
 
         while(true) {
-            kafkaSender.send("msg");
             List<User> systemUsers = sendGetUsersRequest(rateLimiter);
             for (User user : systemUsers) {
                 List<Transaction> userTransactions = sendGetUserTransactionsRequest(user, rateLimiter);
@@ -66,6 +64,8 @@ public class App implements CommandLineRunner {
 
                 Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
                 for (Transaction remoteTransaction : userTransactions) {
+                    remoteTransaction.setUserId(user.getId());
+                    sender.send(remoteTransaction);
                     if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
                         // write into DDB and produce event
                     } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {

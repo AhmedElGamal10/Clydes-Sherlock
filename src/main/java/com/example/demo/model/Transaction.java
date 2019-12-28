@@ -61,4 +61,9 @@ public class Transaction {
     public void setAmount(Double amount) {
         this.amount = amount;
     }
+
+    @Override
+    public String toString() {
+        return "Transaction [userId=" + getUserId() + ", id=" + id + ", amount=" + amount + ", state=" + state + ", created=" + getCreated() + "]";
+    }
 }
