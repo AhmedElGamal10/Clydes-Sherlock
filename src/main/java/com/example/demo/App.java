@@ -6,9 +6,10 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.kafka.Sender;
 import com.example.demo.model.Transaction;
-import com.example.demo.model.TransactionEvent;
 import com.example.demo.model.User;
 import com.example.demo.repositories.TransactionRepository;
+import com.example.demo.service.ClydesCardsLookupService;
+import com.example.demo.service.UserTransactionHandlerService;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
@@ -17,36 +18,46 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @SpringBootApplication
+@EnableAsync
 public class App implements CommandLineRunner {
 
     private static final Logger logger = LogManager.getLogger(App.class);
     private DynamoDBMapper dynamoDBMapper;
-    private final static double EPS = 1e-7;
 
     @Autowired
     private AmazonDynamoDB amazonDynamoDB;
 
     @Autowired
-    private TransactionRepository transactionRepository;
+    private ClydesCardsLookupService clydesCardsLookupService;
 
     @Autowired
-    private Sender sender;
+    private UserTransactionHandlerService userTransactionHandlerService;
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
+    }
+
+    @Bean("threadPoolTaskExecutor")
+    public TaskExecutor getAsyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(1000);
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setThreadNamePrefix("Async-");
+        return executor;
     }
 
     @Override
@@ -56,68 +67,20 @@ public class App implements CommandLineRunner {
         /* Set rate to 2 requests per second .. to be increased to 200 (as required) later */
         RateLimiter rateLimiter = RateLimiter.create(2);
 
-        insertAndLogForDevelopment();
+//        insertAndLogForDevelopment();
 
-        while(true) {
-            List<User> systemUsers = sendGetUsersRequest(rateLimiter);
-            for (User user : systemUsers) {
-                List<Transaction> userTransactions = sendGetUserTransactionsRequest(user, rateLimiter);
+        while (true) {
+            CompletableFuture<List<User>> systemUsers = clydesCardsLookupService.getSystemUsers(rateLimiter);
+            for (User user : systemUsers.get()) {
+                CompletableFuture<List<Transaction>> userTransactions = clydesCardsLookupService.sendGetUserTransactionsRequest(user, rateLimiter);
                 List<Transaction> savedTransactions = getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
 
                 Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
-                for (Transaction remoteTransaction : userTransactions) {
+                for (Transaction remoteTransaction : userTransactions.get()) {
                     remoteTransaction.setUserId(user.getId());
-                    if (!savedTransactionsMap.containsKey(remoteTransaction.getId())) {
-                        handleNewTransaction(remoteTransaction);
-                    } else if (transactionHasChanged(remoteTransaction, savedTransactionsMap.get(remoteTransaction.getId()))) {
-                        handleUpdatedTransaction(remoteTransaction);
-                    }
+                    userTransactionHandlerService.handleUserTransaction(remoteTransaction, savedTransactionsMap);
                 }
             }
-        }
-    }
-
-    @Transactional
-    private void handleNewTransaction(Transaction transaction) {
-        // write into DDB
-        transactionRepository.save(transaction);
-        sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()));
-    }
-
-    @Transactional
-    private void handleUpdatedTransaction(Transaction transaction) {
-        // update DDB
-        transactionRepository.save(transaction);
-        sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE, getCurrentDate()));
-    }
-
-    private boolean transactionHasChanged(Transaction remoteTransaction, Transaction localTransaction) {
-        return remoteTransaction.getCreated().equals(localTransaction.getCreated()) &&
-                remoteTransaction.getState().equals(localTransaction.getState()) &&
-                remoteTransaction.getUserId().equals(localTransaction.getUserId()) &&
-                remoteTransaction.getAmount() - localTransaction.getAmount() < EPS;
-    }
-
-    /* Temporarily for development */
-    private void insertAndLogForDevelopment() {
-        Transaction transaction = new Transaction();
-        transaction.setAmount(50.8);
-        transaction.setCreated("2019-12-27");
-        transaction.setId("transaction_5");
-        transaction.setState("AUTHORIZED");
-        transaction.setUserId("user_2");
-        transaction = transactionRepository.save(transaction);
-
-        logger.info("Saved Transaction object: " + new Gson().toJson(transaction));
-
-        Optional<Transaction> transactionQueried = transactionRepository.findById(transaction.getId());
-        if (transactionQueried.get() != null) {
-            logger.info("Queried object: " + new Gson().toJson(transactionQueried.get()));
-        }
-
-        Iterable<Transaction> transactions = transactionRepository.findAll();
-        for (Transaction transactionObject : transactions) {
-            logger.info("List object: " + new Gson().toJson(transactionObject));
         }
     }
 
@@ -158,57 +121,6 @@ public class App implements CommandLineRunner {
         return unmarshalledQueryResult;
     }
 
-    private List<Transaction> sendGetUserTransactionsRequest(User user, RateLimiter rateLimiter) {
-//        rateLimiter.acquire();
-        System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
-
-        String uri = buildUserTransactionsRequestPath(user);
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<List<Transaction>> userTransactionsResponse =
-                restTemplate.exchange(uri,
-                        HttpMethod.GET, null, new ParameterizedTypeReference<List<Transaction>>() {
-                        });
-        List<Transaction> userTransactions = userTransactionsResponse.getBody();
-        return userTransactions;
-    }
-
-    private List<User> sendGetUsersRequest(RateLimiter rateLimiter) {
-//        rateLimiter.acquire();
-        System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
-
-        final String uri = "http://localhost:8081/clydescards.example.com/users";
-
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<List<User>> usersResponse =
-                restTemplate.exchange(uri,
-                        HttpMethod.GET, null, new ParameterizedTypeReference<List<User>>() {
-                        });
-        List<User> users = usersResponse.getBody();
-
-        return users;
-    }
-
-    private String buildUserTransactionsRequestPath(User user) {
-        final String baseUri = "http://localhost:8081/clydescards.example.com/transactions?userId=";
-
-        String currentDate = getCurrentDate();
-        String fiveDaysAgoDate = getPastDateByDifferenceInDays(5);
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(baseUri);
-        sb.append(user.getId());
-
-        sb.append("&");
-        sb.append("startDate=");
-        sb.append(currentDate);
-
-        sb.append("&");
-        sb.append("endDate=");
-        sb.append(fiveDaysAgoDate);
-
-        return sb.toString();
-    }
-
     private String getCurrentDate() {
         return getPastDateByDifferenceInDays(0);
     }
@@ -219,4 +131,27 @@ public class App implements CommandLineRunner {
 
         return dtf.format(today.plusDays(-1 * differenceInDays));
     }
+
+//    /* Temporarily for development */
+//    private void insertAndLogForDevelopment() {
+//        Transaction transaction = new Transaction();
+//        transaction.setAmount(50.8);
+//        transaction.setCreated("2019-12-27");
+//        transaction.setId("transaction_5");
+//        transaction.setState("AUTHORIZED");
+//        transaction.setUserId("user_2");
+//        transaction = transactionRepository.save(transaction);
+//
+//        logger.info("Saved Transaction object: " + new Gson().toJson(transaction));
+//
+//        Optional<Transaction> transactionQueried = transactionRepository.findById(transaction.getId());
+//        if (transactionQueried.get() != null) {
+//            logger.info("Queried object: " + new Gson().toJson(transactionQueried.get()));
+//        }
+//
+//        Iterable<Transaction> transactions = transactionRepository.findAll();
+//        for (Transaction transactionObject : transactions) {
+//            logger.info("List object: " + new Gson().toJson(transactionObject));
+//        }
+//    }
 }
