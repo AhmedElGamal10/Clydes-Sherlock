@@ -6,7 +6,7 @@ import com.example.demo.model.user.User;
 import java.util.List;
 import java.util.Map;
 
-public interface PersistenceService {
+public interface PersistenceManagementService {
     void initializeDatabase();
     List<Transaction> getUserTransactions(User user, String fiveDaysAgoDate, String currentDate);
 }

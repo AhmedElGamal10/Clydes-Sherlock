@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class PersistenceServiceImpl implements PersistenceService {
+public class PersistenceManagementServiceImpl implements PersistenceManagementService {
     private DynamoDBMapper dynamoDBMapper;
 
     @Autowired

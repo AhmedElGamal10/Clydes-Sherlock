@@ -3,8 +3,8 @@ package com.example.demo;
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
 import com.example.demo.service.RemoteServerLookupService;
-import com.example.demo.service.TransactionCheckService;
-import com.example.demo.service.PersistenceService;
+import com.example.demo.service.UserTransactionsHandlingService;
+import com.example.demo.service.PersistenceManagementService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +13,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.example.demo.util.DateUtils.getCurrentDate;
 import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
@@ -29,10 +26,10 @@ public class App implements CommandLineRunner {
     private RemoteServerLookupService remoteServerLookupService;
 
     @Autowired
-    private TransactionCheckService transactionCheckService;
+    private UserTransactionsHandlingService userTransactionsHandlingService;
 
     @Autowired
-    private PersistenceService persistenceService;
+    private PersistenceManagementService persistenceManagementService;
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
@@ -40,22 +37,19 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        persistenceService.initializeDatabase();
+        persistenceManagementService.initializeDatabase();
 
         while (true) {
-            remoteServerLookupService.getSystemUsers().thenAcceptAsync(systemUsers -> {
+            remoteServerLookupService.sendGetSystemUsersRequest().thenAcceptAsync(systemUsers -> {
                 for (User user : systemUsers) {
-                    System.out.println(user.getId());
-                    List<Transaction> savedTransactions = persistenceService.getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
-                    Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
+                    List<Transaction> savedTransactions = persistenceManagementService.getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+                    userTransactionsHandlingService.setUserOldTransactions(savedTransactions);
 
-                    List<Transaction> userTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
-                        System.out.println(userTransactions.size());
-                        for (Transaction remoteTransaction : userTransactions) {
-                            System.out.println(remoteTransaction.getId());
-                            remoteTransaction.setUserId(user.getId());
-                            transactionCheckService.handleUserTransaction(remoteTransaction, savedTransactionsMap);
-                        }
+                    List<Transaction> remoteUserTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
+                    for (Transaction remoteUserTransaction : remoteUserTransactions) {
+                        remoteUserTransaction.setUserId(user.getId());
+                        userTransactionsHandlingService.handleUserTransaction(remoteUserTransaction);
+                    }
                 }
             });
         }

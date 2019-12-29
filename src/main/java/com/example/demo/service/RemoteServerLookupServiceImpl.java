@@ -30,7 +30,7 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
 
     @Override
     @Async("threadPoolTaskExecutor")
-    public CompletableFuture<List<User>> getSystemUsers() {
+    public CompletableFuture<List<User>> sendGetSystemUsersRequest() {
 //        rateLimiter.acquire();
         System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
 
