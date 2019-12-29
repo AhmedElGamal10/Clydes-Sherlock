@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
-import com.example.demo.model.Transaction;
-import com.example.demo.model.User;
+import com.example.demo.model.transaction.Transaction;
+import com.example.demo.model.user.User;
 import com.google.common.util.concurrent.RateLimiter;
 
 import java.util.List;

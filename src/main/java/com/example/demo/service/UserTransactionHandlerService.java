@@ -1,6 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.model.Transaction;
+import com.example.demo.model.transaction.Transaction;
 
 import java.util.Map;
 

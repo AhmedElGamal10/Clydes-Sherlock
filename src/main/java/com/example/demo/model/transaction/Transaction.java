@@ -1,7 +1,7 @@
-package com.example.demo.model;
+package com.example.demo.model.transaction;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
-import lombok.AllArgsConstructor;
+import com.example.demo.model.user.UserTransactionsIndexKey;
 import org.springframework.data.annotation.Id;
 
 @DynamoDBTable(tableName = "transactions")

@@ -1,7 +1,6 @@
-package com.example.demo.repositories;
+package com.example.demo.repository;
 
-import com.example.demo.model.Transaction;
-import com.example.demo.model.UserTransactionsIndexKey;
+import com.example.demo.model.transaction.Transaction;
 import org.socialsignin.spring.data.dynamodb.repository.EnableScan;
 import org.springframework.data.repository.CrudRepository;
 

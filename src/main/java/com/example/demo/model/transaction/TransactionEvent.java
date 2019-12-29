@@ -1,4 +1,4 @@
-package com.example.demo.model;
+package com.example.demo.model.transaction;
 
 public class TransactionEvent extends Transaction {
     public static enum TRANSACTION_EVENT_TYPE {

@@ -1,16 +1,15 @@
 package com.example.demo.service;
 
-import com.example.demo.kafka.Sender;
-import com.example.demo.model.Transaction;
-import com.example.demo.model.TransactionEvent;
-import com.example.demo.repositories.TransactionRepository;
+import com.example.demo.model.transaction.Transaction;
+import com.example.demo.model.transaction.TransactionEvent;
+import com.example.demo.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
+
+import static com.example.demo.util.DateUtils.getCurrentDate;
 
 @Service
 public class UserTransactionHandlerServiceImpl implements UserTransactionHandlerService {
@@ -20,7 +19,7 @@ public class UserTransactionHandlerServiceImpl implements UserTransactionHandler
     private TransactionRepository transactionRepository;
 
     @Autowired
-    private Sender sender;
+    private EventSenderServiceImpl eventSenderServiceImpl;
 
     @Override
     public void handleUserTransaction(Transaction transaction, Map<String, Transaction> savedTransactionsMap) {
@@ -33,16 +32,22 @@ public class UserTransactionHandlerServiceImpl implements UserTransactionHandler
 
     @Transactional
     private void handleNewTransaction(Transaction transaction) {
-        // write into DDB
         transactionRepository.save(transaction);
-        sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()));
+        eventSenderServiceImpl.sendEvent(buildCreatedTransactionEvent(transaction));
     }
 
     @Transactional
     private void handleUpdatedTransaction(Transaction transaction) {
-        // update DDB
         transactionRepository.save(transaction);
-        sender.send(new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE, getCurrentDate()));
+        eventSenderServiceImpl.sendEvent(buildUpdatedTransactionEvent(transaction));
+    }
+
+    private TransactionEvent buildUpdatedTransactionEvent(Transaction transaction) {
+        return new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE, getCurrentDate());
+    }
+
+    private TransactionEvent buildCreatedTransactionEvent(Transaction transaction) {
+        return new TransactionEvent(transaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate());
     }
 
     private boolean transactionHasChanged(Transaction remoteTransaction, Transaction localTransaction) {
@@ -50,16 +55,5 @@ public class UserTransactionHandlerServiceImpl implements UserTransactionHandler
                 remoteTransaction.getState().equals(localTransaction.getState()) &&
                 remoteTransaction.getUserId().equals(localTransaction.getUserId()) &&
                 remoteTransaction.getAmount() - localTransaction.getAmount() < EPS;
-    }
-
-    private String getCurrentDate() {
-        return getPastDateByDifferenceInDays(0);
-    }
-
-    private String getPastDateByDifferenceInDays(int differenceInDays) {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate today = LocalDate.now();
-
-        return dtf.format(today.plusDays(-1 * differenceInDays));
     }
 }

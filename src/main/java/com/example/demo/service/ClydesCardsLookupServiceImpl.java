@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
-import com.example.demo.model.Transaction;
-import com.example.demo.model.User;
+import com.example.demo.model.transaction.Transaction;
+import com.example.demo.model.user.User;
 import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
@@ -10,13 +10,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.example.demo.util.DateUtils.getCurrentDate;
+import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
+
 @Service
-public class ClydesCardsLookupServiceImpl implements ClydesCardsLookupService{
+public class ClydesCardsLookupServiceImpl implements ClydesCardsLookupService {
 
     private final RestTemplate restTemplate;
 
@@ -78,16 +79,5 @@ public class ClydesCardsLookupServiceImpl implements ClydesCardsLookupService{
         sb.append(fiveDaysAgoDate);
 
         return sb.toString();
-    }
-
-    private String getCurrentDate() {
-        return getPastDateByDifferenceInDays(0);
-    }
-
-    private String getPastDateByDifferenceInDays(int differenceInDays) {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate today = LocalDate.now();
-
-        return dtf.format(today.plusDays(-1 * differenceInDays));
     }
 }

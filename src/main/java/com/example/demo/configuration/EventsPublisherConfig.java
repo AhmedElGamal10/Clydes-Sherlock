@@ -1,9 +1,10 @@
-package com.example.demo.kafka;
+package com.example.demo.configuration;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.example.demo.model.TransactionEvent;
+import com.example.demo.service.EventSenderServiceImpl;
+import com.example.demo.model.transaction.TransactionEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +17,7 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 
 
 @Configuration
-public class SenderConfig {
+public class EventsPublisherConfig {
 
     @Value("${kafka.bootstrap-servers}")
     private String bootstrapServers;
@@ -42,7 +43,7 @@ public class SenderConfig {
     }
 
     @Bean
-    public Sender sender() {
-        return new Sender();
+    public EventSenderServiceImpl sender() {
+        return new EventSenderServiceImpl();
     }
 }
