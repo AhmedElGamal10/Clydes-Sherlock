@@ -13,6 +13,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.example.demo.util.DateUtils.getCurrentDate;
+import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
 
 @SpringBootApplication
 public class App implements CommandLineRunner {
@@ -34,19 +38,29 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        while (true) {
-            remoteServerLookupService.sendGetSystemUsersRequest().thenAcceptAsync(systemUsers -> {
-                for (User user : systemUsers) {
-                    List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
-                    userTransactionsHandlingService.setUserOldTransactions(savedTransactions);
+        persistenceManagementService.initialize();
 
-                    List<Transaction> remoteUserTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
-                    for (Transaction remoteUserTransaction : remoteUserTransactions) {
-                        remoteUserTransaction.setUserId(user.getId());
-                        userTransactionsHandlingService.handleUserTransaction(remoteUserTransaction);
-                    }
-                }
+        Queue<User> systemUsers = new LinkedList<>(remoteServerLookupService.sendGetSystemUsersRequest().get());
+        AtomicInteger systemUsersLastCount = new AtomicInteger(systemUsers.size());
+
+        while (true) {
+
+            remoteServerLookupService.sendGetSystemUsersRequest().thenAcceptAsync(users -> {
+                systemUsers.addAll(users);
+                systemUsersLastCount.set(users.size());
             });
+
+            for(int i = 0; i < systemUsersLastCount.get(); i++) {
+                User user = systemUsers.poll();
+                List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+                userTransactionsHandlingService.setUserOldTransactions(savedTransactions);
+
+                List<Transaction> remoteUserTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
+                for (Transaction remoteUserTransaction : remoteUserTransactions) {
+                    remoteUserTransaction.setUserId(user.getId());
+                    userTransactionsHandlingService.handleUserTransaction(remoteUserTransaction);
+                }
+            }
         }
     }
 }
