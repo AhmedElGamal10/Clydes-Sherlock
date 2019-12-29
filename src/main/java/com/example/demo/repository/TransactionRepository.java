@@ -9,8 +9,6 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.List;
 
 @EnableScan
-//public interface TransactionRepository extends JpaRepository<Transaction, String>, TransactionRepositoryCustom {
-//public interface TransactionRepository extends JpaRepository<Transaction, String> {
-public interface TransactionRepository extends CrudRepository<Transaction, String> {
+public interface TransactionRepository extends CrudRepository<Transaction, String>, CustomTransactionRepository {
 
 }
