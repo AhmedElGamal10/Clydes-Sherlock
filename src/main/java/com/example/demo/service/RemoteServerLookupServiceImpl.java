@@ -18,47 +18,50 @@ import static com.example.demo.util.DateUtils.getCurrentDate;
 import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
 
 @Service
-public class ClydesCardsLookupServiceImpl implements ClydesCardsLookupService {
+public class RemoteServerLookupServiceImpl implements RemoteServerLookupService {
 
     private final RestTemplate restTemplate;
 
-    public ClydesCardsLookupServiceImpl(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder.build();
+    RateLimiter rateLimiter = RateLimiter.create(200);
 
+    public RemoteServerLookupServiceImpl(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder.build();
     }
 
     @Override
     @Async("threadPoolTaskExecutor")
-    public CompletableFuture<List<User>> getSystemUsers(RateLimiter rateLimiter) {
+    public CompletableFuture<List<User>> getSystemUsers() {
 //        rateLimiter.acquire();
         System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
 
 
         final String uri = "http://localhost:8081/clydescards.example.com/users";
 
-        ResponseEntity<List<User>> usersResponse =
+        ResponseEntity<List<User>> getSystemUsersResponse =
                 restTemplate.exchange(uri,
                         HttpMethod.GET, null, new ParameterizedTypeReference<List<User>>() {
                         });
-        List<User> users = usersResponse.getBody();
+        List<User> users = getSystemUsersResponse.getBody();
 
         return CompletableFuture.completedFuture(users);
     }
 
     @Override
-    @Async("threadPoolTaskExecutor")
-    public CompletableFuture<List<Transaction>> sendGetUserTransactionsRequest(User user, RateLimiter rateLimiter) {
+//    @Async("threadPoolTaskExecutor")
+    public List<Transaction> sendGetUserTransactionsRequest(User user) {
 //        rateLimiter.acquire();
         System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
 
         String uri = buildUserTransactionsRequestPath(user);
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<List<Transaction>> userTransactionsResponse =
+        ResponseEntity<List<Transaction>> getUserTransactionsResponse =
                 restTemplate.exchange(uri,
                         HttpMethod.GET, null, new ParameterizedTypeReference<List<Transaction>>() {
                         });
-        List<Transaction> userTransactions = userTransactionsResponse.getBody();
-        return CompletableFuture.completedFuture(userTransactions);
+
+        List<Transaction> userTransactions = getUserTransactionsResponse.getBody();
+
+        return userTransactions;
     }
 
     private String buildUserTransactionsRequestPath(User user) {

@@ -12,7 +12,7 @@ import java.util.Map;
 import static com.example.demo.util.DateUtils.getCurrentDate;
 
 @Service
-public class UserTransactionHandlerServiceImpl implements UserTransactionHandlerService {
+public class TransactionCheckServiceImpl implements TransactionCheckService {
     private final static double EPS = 1e-7;
 
     @Autowired

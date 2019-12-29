@@ -1,14 +1,10 @@
 package com.example.demo;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.model.*;
-import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
-import com.example.demo.service.ClydesCardsLookupService;
-import com.example.demo.service.UserTransactionHandlerService;
-import com.google.common.util.concurrent.RateLimiter;
+import com.example.demo.service.RemoteServerLookupService;
+import com.example.demo.service.TransactionCheckService;
+import com.example.demo.service.PersistenceService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +13,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -28,16 +24,15 @@ import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
 public class App implements CommandLineRunner {
 
     private static final Logger logger = LogManager.getLogger(App.class);
-    private DynamoDBMapper dynamoDBMapper;
 
     @Autowired
-    private AmazonDynamoDB amazonDynamoDB;
+    private RemoteServerLookupService remoteServerLookupService;
 
     @Autowired
-    private ClydesCardsLookupService clydesCardsLookupService;
+    private TransactionCheckService transactionCheckService;
 
     @Autowired
-    private UserTransactionHandlerService userTransactionHandlerService;
+    private PersistenceService persistenceService;
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
@@ -45,60 +40,24 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        initializeDynamoDB();
-
-        /* Set rate to 2 requests per second .. to be increased to 200 (as required) later */
-        RateLimiter rateLimiter = RateLimiter.create(2);
+        persistenceService.initializeDatabase();
 
         while (true) {
-            CompletableFuture<List<User>> systemUsers = clydesCardsLookupService.getSystemUsers(rateLimiter);
-            for (User user : systemUsers.get()) {
-                CompletableFuture<List<Transaction>> userTransactions = clydesCardsLookupService.sendGetUserTransactionsRequest(user, rateLimiter);
-                List<Transaction> savedTransactions = getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+            remoteServerLookupService.getSystemUsers().thenAcceptAsync(systemUsers -> {
+                for (User user : systemUsers) {
+                    System.out.println(user.getId());
+                    List<Transaction> savedTransactions = persistenceService.getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+                    Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
 
-                Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
-                for (Transaction remoteTransaction : userTransactions.get()) {
-                    remoteTransaction.setUserId(user.getId());
-                    userTransactionHandlerService.handleUserTransaction(remoteTransaction, savedTransactionsMap);
+                    List<Transaction> userTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
+                        System.out.println(userTransactions.size());
+                        for (Transaction remoteTransaction : userTransactions) {
+                            System.out.println(remoteTransaction.getId());
+                            remoteTransaction.setUserId(user.getId());
+                            transactionCheckService.handleUserTransaction(remoteTransaction, savedTransactionsMap);
+                        }
                 }
-            }
+            });
         }
-    }
-
-    private void initializeDynamoDB() {
-        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
-
-        CreateTableRequest createTableRequest = dynamoDBMapper
-                .generateCreateTableRequest(Transaction.class);
-
-        createTableRequest.setProvisionedThroughput(
-                new ProvisionedThroughput(10L, 10L));
-        createTableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10L, 10L));
-
-        TableUtils.createTableIfNotExists(amazonDynamoDB, createTableRequest);
-    }
-
-    private List<Transaction> getUserTransactions(User user, String fiveDaysAgoDate, String currentDate) {
-        Map<String, String> expressionAttributesNames = new HashMap<>();
-        expressionAttributesNames.put("#userId", "userId");
-        expressionAttributesNames.put("#created", "created");
-
-        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
-        expressionAttributeValues.put(":userId", new AttributeValue().withS(user.getId()));
-        expressionAttributeValues.put(":fiveDaysAgoDate", new AttributeValue().withS(fiveDaysAgoDate));
-        expressionAttributeValues.put(":currentDate", new AttributeValue().withS(currentDate));
-
-        QueryRequest queryRequest = new QueryRequest()
-                .withTableName("transactions")
-                .withKeyConditionExpression("#userId = :userId and #created between :fiveDaysAgoDate and :currentDate ")
-                .withIndexName("userTransactions-index")
-                .withExpressionAttributeNames(expressionAttributesNames)
-                .withExpressionAttributeValues(expressionAttributeValues);
-
-        QueryResult queryResult = amazonDynamoDB.query(queryRequest);
-
-        List<Transaction> unmarshalledQueryResult = dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult.getItems());
-
-        return unmarshalledQueryResult;
     }
 }

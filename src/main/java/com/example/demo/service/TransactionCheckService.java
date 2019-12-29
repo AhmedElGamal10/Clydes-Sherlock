@@ -4,6 +4,6 @@ import com.example.demo.model.transaction.Transaction;
 
 import java.util.Map;
 
-public interface UserTransactionHandlerService {
+public interface TransactionCheckService {
     void handleUserTransaction(Transaction transaction, Map<String, Transaction> savedTransactionsMap);
 }
