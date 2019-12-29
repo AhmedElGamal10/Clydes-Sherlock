@@ -7,6 +7,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -27,7 +28,7 @@ public class ClydesCardsLookupServiceImpl implements ClydesCardsLookupService {
     }
 
     @Override
-//    @Async("threadPoolTaskExecutor")
+    @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<User>> getSystemUsers(RateLimiter rateLimiter) {
 //        rateLimiter.acquire();
         System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
@@ -45,7 +46,7 @@ public class ClydesCardsLookupServiceImpl implements ClydesCardsLookupService {
     }
 
     @Override
-//    @Async("threadPoolTaskExecutor")
+    @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<Transaction>> sendGetUserTransactionsRequest(User user, RateLimiter rateLimiter) {
 //        rateLimiter.acquire();
         System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
