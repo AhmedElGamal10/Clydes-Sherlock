@@ -14,9 +14,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.*;
 
-import static com.example.demo.util.DateUtils.getCurrentDate;
-import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
-
 @SpringBootApplication
 public class App implements CommandLineRunner {
 
@@ -37,12 +34,10 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        persistenceManagementService.initializeDatabase();
-
         while (true) {
             remoteServerLookupService.sendGetSystemUsersRequest().thenAcceptAsync(systemUsers -> {
                 for (User user : systemUsers) {
-                    List<Transaction> savedTransactions = persistenceManagementService.getUserTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+                    List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
                     userTransactionsHandlingService.setUserOldTransactions(savedTransactions);
 
                     List<Transaction> remoteUserTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
