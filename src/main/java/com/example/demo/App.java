@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
+import com.example.demo.repository.TransactionRepository;
 import com.example.demo.service.RemoteServerLookupService;
 import com.example.demo.service.UserTransactionsHandlingService;
 import com.example.demo.service.PersistenceManagementService;
@@ -38,28 +39,26 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        persistenceManagementService.initialize();
-
         Queue<User> systemUsers = new LinkedList<>(remoteServerLookupService.sendGetSystemUsersRequest().get());
         AtomicInteger systemUsersLastCount = new AtomicInteger(systemUsers.size());
 
         while (true) {
-
-            remoteServerLookupService.sendGetSystemUsersRequest().thenAcceptAsync(users -> {
+            remoteServerLookupService.sendGetSystemUsersRequest().thenAccept(users -> {
                 systemUsers.addAll(users);
                 systemUsersLastCount.set(users.size());
             });
 
-            for(int i = 0; i < systemUsersLastCount.get(); i++) {
+            for(int i = 0; i < systemUsersLastCount.get() && !systemUsers.isEmpty(); i++) {
                 User user = systemUsers.poll();
-                List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user, getPastDateByDifferenceInDays(5), getCurrentDate());
+                List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
                 userTransactionsHandlingService.setUserOldTransactions(savedTransactions);
 
-                List<Transaction> remoteUserTransactions = remoteServerLookupService.sendGetUserTransactionsRequest(user);
-                for (Transaction remoteUserTransaction : remoteUserTransactions) {
-                    remoteUserTransaction.setUserId(user.getId());
-                    userTransactionsHandlingService.handleUserTransaction(remoteUserTransaction);
-                }
+                remoteServerLookupService.sendGetUserTransactionsRequest(user).thenAcceptAsync(remoteUserTransactions -> {
+                    for (Transaction remoteUserTransaction : remoteUserTransactions) {
+                        remoteUserTransaction.setUserId(user.getId());
+                        userTransactionsHandlingService.handleUserTransaction(remoteUserTransaction);
+                    }
+                });
             }
         }
     }

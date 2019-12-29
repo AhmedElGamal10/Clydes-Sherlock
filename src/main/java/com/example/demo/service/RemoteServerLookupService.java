@@ -8,5 +8,5 @@ import java.util.concurrent.CompletableFuture;
 
 public interface RemoteServerLookupService {
     CompletableFuture<List<User>> sendGetSystemUsersRequest();
-    List<Transaction> sendGetUserTransactionsRequest(User user);
+    CompletableFuture<List<Transaction>> sendGetUserTransactionsRequest(User user);
 }

@@ -7,8 +7,5 @@ import java.util.List;
 import java.util.Map;
 
 public interface PersistenceManagementService {
-    void initialize();
-    List<Transaction> getUserPotentialTransactions(User user, String startDate, String endDate);
-//    List<Transaction> queryUserTransactionsIndex(User user, String startDate, String endDate);
-//    List<Transaction> getUserPotentialTransactions(User user);
+    List<Transaction> getUserPotentialTransactions(User user);
 }

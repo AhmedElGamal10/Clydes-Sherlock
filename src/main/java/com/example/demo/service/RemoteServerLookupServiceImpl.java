@@ -31,9 +31,7 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
     @Override
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<User>> sendGetSystemUsersRequest() {
-//        rateLimiter.acquire();
-        System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
-
+        rateLimiter.acquire();
 
         final String uri = "http://localhost:8081/clydescards.example.com/users";
 
@@ -47,10 +45,9 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
     }
 
     @Override
-//    @Async("threadPoolTaskExecutor")
-    public List<Transaction> sendGetUserTransactionsRequest(User user) {
-//        rateLimiter.acquire();
-        System.out.println("made 1 request during: " + rateLimiter.acquire() + "s");
+    @Async("threadPoolTaskExecutor")
+    public CompletableFuture<List<Transaction>> sendGetUserTransactionsRequest(User user) {
+        rateLimiter.acquire();
 
         String uri = buildUserTransactionsRequestPath(user);
         RestTemplate restTemplate = new RestTemplate();
@@ -61,7 +58,7 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
 
         List<Transaction> userTransactions = getUserTransactionsResponse.getBody();
 
-        return userTransactions;
+        return CompletableFuture.completedFuture(userTransactions);
     }
 
     private String buildUserTransactionsRequestPath(User user) {
