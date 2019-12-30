@@ -26,6 +26,10 @@ public class CustomTransactionRepositoryImpl implements CustomTransactionReposit
         CreateTableRequest createTableRequest = dynamoDBMapper
                 .generateCreateTableRequest(Transaction.class);
 
+        DeleteTableRequest deleteTableRequest = dynamoDBMapper
+                .generateDeleteTableRequest(Transaction.class);
+        TableUtils.deleteTableIfExists(amazonDynamoDB, deleteTableRequest);
+
         createTableRequest.setProvisionedThroughput(
                 new ProvisionedThroughput(10L, 10L));
         createTableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10L, 10L));

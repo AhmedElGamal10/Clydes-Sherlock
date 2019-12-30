@@ -29,4 +29,9 @@ public class TransactionEvent extends Transaction {
     public void setEventTimeStamp(String eventTimeStamp) {
         this.eventTimeStamp = eventTimeStamp;
     }
+
+    @Override
+    public String toString() {
+        return "Transaction [userId=" + getUserId() + ", id=" + getId() + ", amount=" + getAmount() + ", state=" + getState() + ", created=" + getCreated() + ", eventType=" + eventType + ", eventTimeStamp=" + eventTimeStamp +"]";
+    }
 }
