@@ -29,7 +29,7 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
     public void handleUserTransaction(Transaction remoteUserTransaction) {
         if (!userOldTransactionsMap.containsKey(remoteUserTransaction.getId())) {
             handleNewOrUpdatedTransaction(remoteUserTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE);
-        } else if (transactionHasChanged(remoteUserTransaction, userOldTransactionsMap.get(remoteUserTransaction.getId()))) {
+        } else if (!equalTransactions(remoteUserTransaction, userOldTransactionsMap.get(remoteUserTransaction.getId()))) {
             handleNewOrUpdatedTransaction(remoteUserTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE);
         }
     }
@@ -40,11 +40,11 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
         eventSenderServiceImpl.sendEvent(new TransactionEvent(transaction, eventType, getCurrentDate()));
     }
 
-    private boolean transactionHasChanged(Transaction remoteTransaction, Transaction localTransaction) {
+    private boolean equalTransactions(Transaction remoteTransaction, Transaction localTransaction) {
         return remoteTransaction.getCreated().equals(localTransaction.getCreated()) &&
                 remoteTransaction.getState().equals(localTransaction.getState()) &&
                 remoteTransaction.getUserId().equals(localTransaction.getUserId()) &&
-                remoteTransaction.getAmount() - localTransaction.getAmount() < EPS;
+                Math.abs(remoteTransaction.getAmount() - localTransaction.getAmount()) < EPS;
     }
 
     @Override
