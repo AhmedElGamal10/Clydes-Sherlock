@@ -36,7 +36,7 @@ public class AsyncEventsSystemRunner implements CommandLineRunner {
         AtomicInteger systemUsersLastCount = new AtomicInteger(systemUsers.size());
 
         while (true) {
-            remoteServerLookupService.getSystemUsers().thenAccept(users -> {
+            remoteServerLookupService.getSystemUsers().thenAcceptAsync(users -> {
                 systemUsers.addAll(users);
                 systemUsersLastCount.set(users.size());
             });
