@@ -46,7 +46,6 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
         } catch (ResourceAccessException e) {
             throw new RemoteServiceUnavailableException("Remote service is unavailable for call.");
         }
-        //        return sendRequest(uri);
     }
 
     @Override
@@ -66,24 +65,7 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
         } catch (ResourceAccessException e) {
             throw new RemoteServiceUnavailableException("Remote service is unavailable for call.");
         }
-        //        return sendRequest(uri);
     }
-
-//    private <T> CompletableFuture<List<T>> sendRequest(String uri, Class<T> type) {
-//        Class a = type;
-//        try {
-//            ResponseEntity<List<type>> response =
-//                    restTemplate.exchange(uri,
-//                            HttpMethod.GET, null, new ParameterizedTypeReference<List<type>>() {
-//                            });
-//
-//            List<T> responseAsList = response.getBody();
-//
-//            return CompletableFuture.completedFuture(responseAsList);
-//        } catch (ResourceAccessException e) {
-//            throw new RemoteServiceUnavailableException("Remote service is unavailable for call.");
-//        }
-//    }
 
     private String buildUserTransactionsRequestPath(User user) {
         final String baseUri = "http://localhost:8081/clydescards.example.com/transactions?userId=";
