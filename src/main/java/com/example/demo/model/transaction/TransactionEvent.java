@@ -1,15 +1,24 @@
 package com.example.demo.model.transaction;
 
-public class TransactionEvent extends Transaction {
+public class TransactionEvent {
     public static enum TRANSACTION_EVENT_TYPE {
         CREATE, UPDATE
     }
 
+    public Transaction getTransaction() {
+        return transaction;
+    }
+
+    public void setTransaction(Transaction transaction) {
+        this.transaction = transaction;
+    }
+
+    Transaction transaction;
     TRANSACTION_EVENT_TYPE eventType;
     String eventTimeStamp;
 
     public TransactionEvent(Transaction transaction, TRANSACTION_EVENT_TYPE eventType, String eventTimeStamp) {
-        super(transaction);
+        this.transaction = transaction;
         this.eventType = eventType;
         this.eventTimeStamp = eventTimeStamp;
     }
@@ -30,8 +39,11 @@ public class TransactionEvent extends Transaction {
         this.eventTimeStamp = eventTimeStamp;
     }
 
+    public void setUserId(String userId) {
+        this.transaction.setUserId(userId);
+    }
     @Override
     public String toString() {
-        return "Transaction [userId=" + getUserId() + ", id=" + getId() + ", amount=" + getAmount() + ", state=" + getState() + ", created=" + getCreated() + ", eventType=" + eventType + ", eventTimeStamp=" + eventTimeStamp +"]";
+        return "Transaction [userId=" + transaction.getUserId() + ", id=" + transaction.getId() + ", amount=" + transaction.getAmount() + ", state=" + transaction.getState() + ", created=" + transaction.getCreated() + ", eventType=" + eventType + ", eventTimeStamp=" + eventTimeStamp +"]";
     }
 }

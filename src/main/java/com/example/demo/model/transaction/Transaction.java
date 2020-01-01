@@ -92,8 +92,4 @@ public class Transaction {
                 this.getState().equals(transaction.getState()) &&
                 Math.abs(this.getAmount() - transaction.getAmount()) < EPS;
     }
-
-    public Transaction getTransaction() {
-        return this;
-    }
 }
