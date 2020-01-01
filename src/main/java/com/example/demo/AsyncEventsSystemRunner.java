@@ -55,8 +55,18 @@ public class AsyncEventsSystemRunner implements CommandLineRunner {
     }
 
     private CompletableFuture<List<TransactionEvent>> fetchAllTransactionEventsForUser(User user) {
-        List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
         CompletableFuture<List<Transaction>> remoteTransactions = remoteServerLookupService.getUserTransactions(user);
+        try {
+            List<Transaction> list = remoteTransactions.get();
+            Transaction t = list.get(0);
+            t.setUserId("user_1");
+            persistenceManagementService.save(t);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
         return remoteTransactions.thenApplyAsync(transactions -> userTransactionsHandlingService.resolveConflicts(transactions, savedTransactions));
     }
 }
