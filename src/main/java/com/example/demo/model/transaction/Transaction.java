@@ -6,7 +6,7 @@ import org.springframework.data.annotation.Id;
 
 @DynamoDBTable(tableName = "transactions")
 public class Transaction {
-
+    private final double EPS = 1e-7;
     private UserTransactionsIndexKey userTransactionsIndexKey;
 
     @Id
@@ -70,5 +70,30 @@ public class Transaction {
 
     public void setAmount(Double amount) {
         this.amount = amount;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == null) {
+            return false;
+        }
+
+        if (o == this) {
+            return true;
+        }
+
+        if (!(o instanceof Transaction)) {
+            return false;
+        }
+
+        Transaction transaction = (Transaction) o;
+
+        return this.getCreated().equals(transaction.getCreated()) &&
+                this.getState().equals(transaction.getState()) &&
+                Math.abs(this.getAmount() - transaction.getAmount()) < EPS;
+    }
+
+    public Transaction getTransaction() {
+        return this;
     }
 }

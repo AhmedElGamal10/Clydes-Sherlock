@@ -1,13 +1,16 @@
 package com.example.demo.service;
 
+import com.example.demo.AsyncEventsSystemRunner;
 import com.example.demo.exception.RemoteServiceUnavailableException;
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.RateLimiter;
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.ListenableFuture;
-import org.asynchttpclient.Request;
-import org.asynchttpclient.Response;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.asynchttpclient.*;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -16,9 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static com.example.demo.util.DateUtils.getCurrentDate;
 import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
@@ -28,95 +31,51 @@ import static org.asynchttpclient.Dsl.*;
 public class RemoteServerLookupServiceImpl implements RemoteServerLookupService {
     private final RestTemplate restTemplate;
 
-    RateLimiter rateLimiter = RateLimiter.create(200);
+    private static final Logger LOGGER = LogManager.getLogger(EventSenderServiceImpl.class);
 
+    RateLimiter rateLimiter = RateLimiter.create(200);
+    AsyncHttpClient asyncHttpClient = asyncHttpClient();
+
+    AsyncHttpClient c = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
+    ObjectMapper objectMapper = new ObjectMapper();
     public RemoteServerLookupServiceImpl(RestTemplateBuilder restTemplateBuilder) {
         this.restTemplate = restTemplateBuilder.build();
     }
 
-//    @Override
-//    @Async("threadPoolTaskExecutor")
-//    public CompletableFuture<List<User>> getSystemUsersOld() {
-//        rateLimiter.acquire();
-//
-//        AsyncRestTemplate asycTemp = new AsyncRestTemplate();
-//        String url ="http://google.com";
-//        HttpMethod method = HttpMethod.GET;
-//        Class<String> responseType = String.class;
-//        //create request entity using HttpHeaders
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.setContentType(MediaType.TEXT_PLAIN);
-//        HttpEntity<String> requestEntity = new HttpEntity<String>("params", headers);
-//        ListenableFuture<ResponseEntity<String>> future = asycTemp.exchange(url, method, requestEntity, responseType);
-//        try {
-//            //waits for the result
-//            ResponseEntity<String> entity = future.get();
-//            //prints body source code for the given URL
-//            System.out.println(entity.getBody());
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        } catch (ExecutionException e) {
-//            e.printStackTrace();
-//        }
-//        final String uri = "http://localhost:8081/clydescards.example.com/users";
-//        try {
-//            ResponseEntity<List<User>> response =
-//                    restTemplate.exchange(uri,
-//                            HttpMethod.GET, null, new ParameterizedTypeReference<List<User>>() {
-//                            });
-//
-//            List<User> responseAsList = response.getBody();
-//
-//            return CompletableFuture.completedFuture(responseAsList);
-//        } catch (ResourceAccessException e) {
-//            throw new RemoteServiceUnavailableException("Remote service is unavailable for call.");
-//        }
-//    }
-
-
-//    AsyncHttpClient asyncHttpClient = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
-    AsyncHttpClient asyncHttpClient = asyncHttpClient();
-    AsyncHttpClient c = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
-
     @Override
     @Async("threadPoolTaskExecutor")
-    public ListenableFuture<Response> getSystemUsers() {
+    public CompletableFuture<List<User>> getSystemUsers() {
         rateLimiter.acquire();
         final String uri = "http://localhost:8081/clydescards.example.com/users";
         Request request = get(uri).build();
-        ListenableFuture<Response> whenResponse = asyncHttpClient.executeRequest(request);
-
-        Runnable callback = () -> {
-            try  {
-                Response response = whenResponse.get();
-                System.out.println(response);
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
-        };
-
-        return whenResponse;
+        return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseUsersResponse);
     }
 
+    private List<User> parseUsersResponse(Response response) {
+        try {
+            return objectMapper.readValue(response.getResponseBody(), new TypeReference<List<User>>() {});
+        } catch (JsonProcessingException e) {
+            LOGGER.warn("Not able to parse the users response");
+            return new LinkedList<>();
+        }
+    }
 
+    private List<Transaction> parseTransactionsResponse(Response response) {
+        try {
+            return objectMapper.readValue(response.getResponseBody(), new TypeReference<List<Transaction>>() {});
+        } catch (JsonProcessingException e) {
+            LOGGER.warn("Not able to parse the transactions response");
+            return new LinkedList<>();
+        }
+    }
 
     @Override
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<Transaction>> getUserTransactions(User user) {
         rateLimiter.acquire();
         String uri = buildUserTransactionsRequestPath(user);
-        try {
-            ResponseEntity<List<Transaction>> response =
-                    restTemplate.exchange(uri,
-                            HttpMethod.GET, null, new ParameterizedTypeReference<List<Transaction>>() {
-                            });
-
-            List<Transaction> responseAsList = response.getBody();
-
-            return CompletableFuture.completedFuture(responseAsList);
-        } catch (ResourceAccessException e) {
-            throw new RemoteServiceUnavailableException("Remote service is unavailable for call.");
-        }
+        Request request = get(uri).build();
+        return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseTransactionsResponse);
     }
 
     private String buildUserTransactionsRequestPath(User user) {

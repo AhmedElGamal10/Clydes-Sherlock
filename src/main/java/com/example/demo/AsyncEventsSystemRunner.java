@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import com.example.demo.model.transaction.Transaction;
+import com.example.demo.model.transaction.TransactionEvent;
 import com.example.demo.model.user.User;
 import com.example.demo.service.PersistenceManagementService;
 import com.example.demo.service.RemoteServerLookupService;
@@ -11,15 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Component
 public class AsyncEventsSystemRunner implements CommandLineRunner {
 
-    private static final Logger LOGGER = LogManager.getLogger(AsyncEventsSystemRunner.class);
+    private final Logger LOGGER = LogManager.getLogger(AsyncEventsSystemRunner.class);
 
     @Autowired
     private RemoteServerLookupService remoteServerLookupService;
@@ -32,30 +32,31 @@ public class AsyncEventsSystemRunner implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        Queue<User> systemUsers = new LinkedList<>(remoteServerLookupService.getSystemUsers().get());
-        AtomicInteger systemUsersLastCount = new AtomicInteger(systemUsers.size());
-
         while (true) {
-            remoteServerLookupService.getSystemUsers().thenAcceptAsync(users -> {
-                systemUsers.addAll(users);
-                systemUsersLastCount.set(users.size());
-            });
-
-            for(int i = 0; i < systemUsersLastCount.get() && !systemUsers.isEmpty(); i++) {
-                User user = systemUsers.poll();
-
-                if(user == null) continue;
-
-                List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
-                userTransactionsHandlingService.setUserOldTransactions(savedTransactions);
-
-                remoteServerLookupService.getUserTransactions(user).thenAcceptAsync(remoteUserTransactions -> {
-                    for (Transaction remoteUserTransaction : remoteUserTransactions) {
-                        remoteUserTransaction.setUserId(user.getId());
-                        userTransactionsHandlingService.handleUserTransaction(remoteUserTransaction);
-                    }
-                });
-            }
+            List<User> users = remoteServerLookupService.getSystemUsers().get();
+            processUsersTransactions(users);
         }
+    }
+
+    private void processUsersTransactions(List<User> users) {
+        users.stream().forEach(this::processUserTransactions);
+    }
+
+    private void processUserTransactions(User user) {
+        try {
+            fetchAllTransactionEventsForUser(user).get()
+                    .stream().peek(x -> x.setUserId(user.getId()))
+                    .forEach(userTransactionsHandlingService::handleTransactionEvents);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private CompletableFuture<List<TransactionEvent>> fetchAllTransactionEventsForUser(User user) {
+        List<Transaction> savedTransactions = persistenceManagementService.getUserPotentialTransactions(user);
+        CompletableFuture<List<Transaction>> remoteTransactions = remoteServerLookupService.getUserTransactions(user);
+        return remoteTransactions.thenApplyAsync(transactions -> userTransactionsHandlingService.resolveConflicts(transactions, savedTransactions));
     }
 }

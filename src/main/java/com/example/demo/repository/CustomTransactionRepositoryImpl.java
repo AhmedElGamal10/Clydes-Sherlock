@@ -12,6 +12,7 @@ import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class CustomTransactionRepositoryImpl implements CustomTransactionRepository {
     private DynamoDBMapper dynamoDBMapper;
@@ -23,8 +24,14 @@ public class CustomTransactionRepositoryImpl implements CustomTransactionReposit
     private void initializeDatabase(){
         dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
 
+
+
         CreateTableRequest createTableRequest = dynamoDBMapper
                 .generateCreateTableRequest(Transaction.class);
+
+        DeleteTableRequest deleteTableRequest = dynamoDBMapper
+                .generateDeleteTableRequest(Transaction.class);
+        TableUtils.deleteTableIfExists(amazonDynamoDB, deleteTableRequest);
 
         createTableRequest.setProvisionedThroughput(
                 new ProvisionedThroughput(10L, 10L));
@@ -32,6 +39,30 @@ public class CustomTransactionRepositoryImpl implements CustomTransactionReposit
 
         TableUtils.createTableIfNotExists(amazonDynamoDB, createTableRequest);
     }
+
+//    private void dummyFun() {
+//        DynamoDbAsyncClient client = DynamoDbAsyncClient.create();
+//        CompletableFuture<ListTablesResponse> response = client.listTables(ListTablesRequest.builder()
+//                .build());
+//
+//        // Map the response to another CompletableFuture containing just the table names
+//        CompletableFuture<List<String>> tableNames = response.thenApply(ListTablesResponse::tableNames);
+//        // When future is complete (either successfully or in error) handle the response
+//        tableNames.whenComplete((tables, err) -> {
+//            try {
+//                if (tables != null) {
+//                    tables.forEach(System.out::println);
+//                } else {
+//                    // Handle error
+//                    err.printStackTrace();
+//                }
+//            } finally {
+//                // Lets the application shut down. Only close the client when you are completely done with it.
+//                client.close();
+//            }
+//        });
+//
+//    }
 
     @Override
     public List<Transaction> queryUserTransactionsIndex(User user, String startDate, String endDate) {

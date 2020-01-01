@@ -16,7 +16,7 @@ import static com.example.demo.util.DateUtils.getCurrentDate;
 
 @Service
 public class UserTransactionsHandlingServiceImpl implements UserTransactionsHandlingService {
-    private final static double EPS = 1e-7;
+
     private Map<String, Transaction> userOldTransactionsMap;
 
     @Autowired
@@ -27,28 +27,29 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
 
     @Override
     public void handleUserTransaction(Transaction remoteUserTransaction) {
-        if (!userOldTransactionsMap.containsKey(remoteUserTransaction.getId())) {
-            handleNewOrUpdatedTransaction(remoteUserTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE);
-        } else if (!equalTransactions(remoteUserTransaction, userOldTransactionsMap.get(remoteUserTransaction.getId()))) {
-            handleNewOrUpdatedTransaction(remoteUserTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE);
-        }
+//        if (!userOldTransactionsMap.containsKey(remoteUserTransaction.getId())) {
+//            handleTransactionEvents(remoteUserTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE);
+//        } else if (!equalTransactions(remoteUserTransaction, userOldTransactionsMap.get(remoteUserTransaction.getId()))) {
+//            handleNewOrUpdatedTransaction(remoteUserTransaction, TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE);
+//        }
     }
 
-    @Transactional
-    private void handleNewOrUpdatedTransaction(Transaction transaction, TransactionEvent.TRANSACTION_EVENT_TYPE eventType) {
-        transactionRepository.save(transaction);
-        eventSenderServiceImpl.sendEvent(new TransactionEvent(transaction, eventType, getCurrentDate()));
-    }
-
-    private boolean equalTransactions(Transaction remoteTransaction, Transaction localTransaction) {
-        return remoteTransaction.getCreated().equals(localTransaction.getCreated()) &&
-                remoteTransaction.getState().equals(localTransaction.getState()) &&
-                remoteTransaction.getUserId().equals(localTransaction.getUserId()) &&
-                Math.abs(remoteTransaction.getAmount() - localTransaction.getAmount()) < EPS;
+//    @Transactional
+    public void handleTransactionEvents(TransactionEvent transactionEvent) {
+        transactionRepository.save(transactionEvent);
+        eventSenderServiceImpl.sendEvent(transactionEvent);
     }
 
     @Override
     public void setUserOldTransactions(List<Transaction> savedTransactions) {
         userOldTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
+    }
+
+    public List<TransactionEvent> resolveConflicts(List<Transaction> remoteTransactions, List<Transaction> savedTransactions) {
+        Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
+
+        return remoteTransactions.stream().filter(x -> !x.equals(savedTransactionsMap.getOrDefault(x.getId(), null)))
+                .map(x -> new TransactionEvent(x.getTransaction(), savedTransactionsMap.containsKey(x.getId())? TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE : TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()))
+                .collect(Collectors.toList());
     }
 }
