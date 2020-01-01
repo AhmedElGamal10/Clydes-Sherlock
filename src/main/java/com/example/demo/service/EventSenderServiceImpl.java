@@ -22,13 +22,6 @@ public class EventSenderServiceImpl {
 
     public void sendEvent(TransactionEvent transactionEvent) {
         LOGGER.info("sending transaction event='{}'", transactionEvent.toString());
-        Transaction t = new Transaction();
-        t.setUserId("aaa");
-        t.setId("hjbfvdf");
-        t.setState("aaa");
-        t.setCreated("2019-12-31");
-        t.setAmount(50.88);
-        TransactionEvent event = new TransactionEvent(t, TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate());
-        kafkaTemplate.send(topic, event);
+        kafkaTemplate.send(topic, transactionEvent);
     }
 }

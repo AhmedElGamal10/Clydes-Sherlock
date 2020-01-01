@@ -7,6 +7,7 @@ import com.example.demo.model.transaction.TransactionEvent;
 import com.example.demo.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -18,18 +19,13 @@ import static com.example.demo.util.DateUtils.getCurrentDate;
 @Service
 public class UserTransactionsHandlingServiceImpl implements UserTransactionsHandlingService {
 
-    private Map<String, Transaction> userOldTransactionsMap;
-
-//    @Autowired
-//    private TransactionRepository transactionRepository;
-
     @Autowired
     private TransactionRepository transactionRepository;
 
     @Autowired
     private EventSenderServiceImpl eventSenderServiceImpl;
 
-//    @Transactional
+    @Transactional
     public void handleTransactionEvents(TransactionEvent transactionEvent) {
         transactionRepository.save(transactionEvent.getTransaction());
         eventSenderServiceImpl.sendEvent(transactionEvent);

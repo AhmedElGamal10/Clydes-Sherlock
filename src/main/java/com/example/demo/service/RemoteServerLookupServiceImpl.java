@@ -29,18 +29,13 @@ import static org.asynchttpclient.Dsl.*;
 
 @Service
 public class RemoteServerLookupServiceImpl implements RemoteServerLookupService {
-    private final RestTemplate restTemplate;
-
     private static final Logger LOGGER = LogManager.getLogger(EventSenderServiceImpl.class);
 
     RateLimiter rateLimiter = RateLimiter.create(200);
     AsyncHttpClient asyncHttpClient = asyncHttpClient();
 
-    AsyncHttpClient c = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
+    AsyncHttpClient client = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
     ObjectMapper objectMapper = new ObjectMapper();
-    public RemoteServerLookupServiceImpl(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder.build();
-    }
 
     @Override
     @Async("threadPoolTaskExecutor")
@@ -49,6 +44,15 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
         final String uri = "http://localhost:8081/clydescards.example.com/users";
         Request request = get(uri).build();
         return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseUsersResponse);
+    }
+
+    @Override
+    @Async("threadPoolTaskExecutor")
+    public CompletableFuture<List<Transaction>> getUserTransactions(User user) {
+        rateLimiter.acquire();
+        String uri = buildUserTransactionsRequestPath(user);
+        Request request = get(uri).build();
+        return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseTransactionsResponse);
     }
 
     private List<User> parseUsersResponse(Response response) {
@@ -67,15 +71,6 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
             LOGGER.warn("Not able to parse the transactions response");
             return new LinkedList<>();
         }
-    }
-
-    @Override
-    @Async("threadPoolTaskExecutor")
-    public CompletableFuture<List<Transaction>> getUserTransactions(User user) {
-        rateLimiter.acquire();
-        String uri = buildUserTransactionsRequestPath(user);
-        Request request = get(uri).build();
-        return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseTransactionsResponse);
     }
 
     private String buildUserTransactionsRequestPath(User user) {
