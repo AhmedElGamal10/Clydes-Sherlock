@@ -19,6 +19,9 @@ public class DynamoDbClientConfigurationBean {
     @Value("${amazon.dynamodb.endpoint}")
     private String dynamoDbEndpoint;
 
+    @Value("${amazon.dynamodb.region}")
+    private String dynamoDbRegion;
+
     @Value("${amazon.aws.accessKey}")
     private String awsAccessKey;
 
@@ -30,7 +33,7 @@ public class DynamoDbClientConfigurationBean {
         return AmazonDynamoDBAsyncClientBuilder
                 .standard()
                 .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:8000/", "us-west-1"))
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(dynamoDbEndpoint, dynamoDbRegion))
                 .build();
     }
 

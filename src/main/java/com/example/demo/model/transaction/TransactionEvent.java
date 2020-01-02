@@ -3,13 +3,13 @@ package com.example.demo.model.transaction;
 import com.example.demo.util.ServiceProvider;
 
 public class TransactionEvent {
-    public static enum TRANSACTION_EVENT_TYPE {
+    public enum TransactionEventType {
         CREATE, UPDATE
     }
 
     Transaction transaction;
     String eventTimeStamp;
-    TRANSACTION_EVENT_TYPE eventType;
+    TransactionEventType eventType;
     private static final ServiceProvider SERVICE_PROVIDER = ServiceProvider.CLYDE;
 
     public Transaction getTransaction() {
@@ -20,7 +20,7 @@ public class TransactionEvent {
         this.transaction = transaction;
     }
 
-    public TransactionEvent(Transaction transaction, TRANSACTION_EVENT_TYPE eventType, String eventTimeStamp) {
+    public TransactionEvent(Transaction transaction, TransactionEventType eventType, String eventTimeStamp) {
         this.transaction = transaction;
         this.eventType = eventType;
         this.eventTimeStamp = eventTimeStamp;
@@ -29,14 +29,16 @@ public class TransactionEvent {
     public String getEventTimeStamp() {
         return eventTimeStamp;
     }
+
     public void setEventTimeStamp(String eventTimeStamp) {
         this.eventTimeStamp = eventTimeStamp;
     }
 
-    public TRANSACTION_EVENT_TYPE getEventType() {
+    public TransactionEventType getEventType() {
         return eventType;
     }
-    public void setEventType(TRANSACTION_EVENT_TYPE eventType) {
+
+    public void setEventType(TransactionEventType eventType) {
         this.eventType = eventType;
     }
 

@@ -33,7 +33,7 @@ public class EventSenderServiceImpl implements EventSenderService {
 
             @Override
             public void onSuccess(final SendResult<String, TransactionEvent> message) {
-                LOGGER.info("sent message= " + message + " with offset= " + message.getRecordMetadata().offset());
+                LOGGER.info("sent message = " + message + " with offset= " + message.getRecordMetadata().offset());
             }
 
             @Override

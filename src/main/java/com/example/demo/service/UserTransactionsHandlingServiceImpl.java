@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.transaction.TransactionEvent;
+import com.example.demo.model.transaction.TransactionEvent.TransactionEventType;
 import com.example.demo.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
 
     @Transactional
     public CompletableFuture<Void> handleTransactionEvents(TransactionEvent transactionEvent) {
-        return CompletableFuture.allOf(transactionRepository.save(transactionEvent.getTransaction()),
+        return CompletableFuture.allOf(transactionRepository.saveTransaction(transactionEvent.getTransaction()),
                 eventSenderService.sendEvent(transactionEvent));
     }
 
@@ -34,7 +35,7 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
         Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
 
         return remoteTransactions.stream().filter(x -> !x.equals(savedTransactionsMap.getOrDefault(x.getId(), null)))
-                .map(x -> new TransactionEvent(x, savedTransactionsMap.containsKey(x.getId()) ? TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE : TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()))
+                .map(x -> new TransactionEvent(x, savedTransactionsMap.containsKey(x.getId()) ? TransactionEventType.UPDATE : TransactionEventType.CREATE, getCurrentDate()))
                 .collect(Collectors.toList());
     }
 }

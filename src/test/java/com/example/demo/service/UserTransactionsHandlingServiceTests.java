@@ -1,4 +1,4 @@
-//package com.example.demo.service;
-//
-//public class UserTransactionsHandlingServiceTests {
-//}
+package com.example.demo.service;
+
+public class UserTransactionsHandlingServiceTests {
+}

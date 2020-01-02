@@ -1,4 +1,4 @@
-//package com.example.demo.service;
-//
-//public class EventSenderServiceImplTests {
-//}
+package com.example.demo.service;
+
+public class EventSenderServiceTests {
+}

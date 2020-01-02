@@ -8,7 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.RateLimiter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asynchttpclient.*;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.Request;
+import org.asynchttpclient.Response;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -24,17 +27,20 @@ import static org.asynchttpclient.Dsl.*;
 public class RemoteServerLookupServiceImpl implements RemoteServerLookupService {
     private static final Logger LOGGER = LogManager.getLogger(RemoteServerLookupService.class);
 
-    RateLimiter rateLimiter = RateLimiter.create(2);
+    RateLimiter rateLimiter = RateLimiter.create(200);
     AsyncHttpClient asyncHttpClient = asyncHttpClient();
 
     AsyncHttpClient client = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
     ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${remote.service.uri}")
+    private String remoteServiceUri;
+
     @Override
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<User>> getSystemUsers() {
         rateLimiter.acquire();
-        final String uri = "http://localhost:8081/clydescards.example.com/users";
+        final String uri = remoteServiceUri + "/users";
         Request request = get(uri).build();
 
         return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseUsersResponse);
@@ -68,7 +74,7 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
     }
 
     private String buildUserTransactionsRequestPath(User user) {
-        final String baseUri = "http://localhost:8081/clydescards.example.com/transactions?userId=";
+        final String baseUri = remoteServiceUri + "/transactions?userId=";
 
         String currentDate = getCurrentDate();
         String fiveDaysAgoDate = getPastDateByDifferenceInDays(5);

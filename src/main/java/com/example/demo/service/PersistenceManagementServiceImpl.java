@@ -17,11 +17,11 @@ import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
 public class PersistenceManagementServiceImpl implements PersistenceManagementService {
 
     @Autowired
-    TransactionRepository transactionRepository;
+    private TransactionRepository transactionRepository;
 
     @Override
     public CompletableFuture<PutItemResult> save(Transaction transaction) {
-        return transactionRepository.save(transaction);
+        return transactionRepository.saveTransaction(transaction);
     }
 
     @Override
