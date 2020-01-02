@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,7 +28,13 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
 
     @Transactional
     public void handleTransactionEvents(TransactionEvent transactionEvent) {
-        transactionRepository.save(transactionEvent.getTransaction());
+        try {
+            transactionRepository.save(transactionEvent.getTransaction()).get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
         eventSenderServiceImpl.sendEvent(transactionEvent);
     }
 

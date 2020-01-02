@@ -1,12 +1,11 @@
 package com.example.demo.repository;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsync;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
+import com.example.demo.util.CompletablePromise;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Repository
 public class TransactionRepository {
@@ -23,32 +24,19 @@ public class TransactionRepository {
     private DynamoDBMapper dynamoDBMapper;
 
     @Autowired
-    private AmazonDynamoDB amazonDynamoDB;
-
-//    @Autowired
-//    private AmazonDynamoDBAsync amazonDynamoDBAsync;
+    private AmazonDynamoDBAsync amazonDynamoDBAsync;
 
     @PostConstruct
-    private void initializeDatabase(){
-        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
+    private void initializeDatabase() {
+        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDBAsync);
 
         CreateTableRequest createTableRequest = buildTransactionsTableCreateRequest();
-//        CreateTableRequest createTableRequest = dynamoDBMapper
-//                .generateCreateTableRequest(Transaction.class);
 
-//        DeleteTableRequest deleteTableRequest = dynamoDBMapper
-//                .generateDeleteTableRequest(Transaction.class);
-//        TableUtils.deleteTableIfExists(amazonDynamoDB, deleteTableRequest);
-
-//        createTableRequest.setProvisionedThroughput(
-//                new ProvisionedThroughput(10L, 10L));
-//        createTableRequest.getGlobalSecondaryIndexes().get(0).setProvisionedThroughput(new ProvisionedThroughput(10L, 10L));
-
-//        TableUtils.createTableIfNotExists(amazonDynamoDB, createTableRequest);
         DeleteTableRequest d = new DeleteTableRequest();
         d.setTableName("transactions");
-        amazonDynamoDB.deleteTable(d);
-        amazonDynamoDB.createTable(createTableRequest);
+
+        amazonDynamoDBAsync.deleteTable(d);
+        amazonDynamoDBAsync.createTable(createTableRequest);
     }
 
     private CreateTableRequest buildTransactionsTableCreateRequest() {
@@ -106,54 +94,29 @@ public class TransactionRepository {
         return createTableRequest;
     }
 
-    public PutItemResult save(Transaction transaction) {
+    public CompletableFuture<PutItemResult> save(Transaction transaction) {
 
         PutItemRequest putItemRequest = new PutItemRequest();
         putItemRequest.setReturnConsumedCapacity(ReturnConsumedCapacity.TOTAL);
 
         putItemRequest.setReturnValues(ReturnValue.ALL_OLD);
 
-        Map<String,AttributeValue> attributeValues = new HashMap<>();
+        Map<String, AttributeValue> attributeValues = new HashMap<>();
 
-        attributeValues.put("userId",new AttributeValue().withS(transaction.getUserId()));
-        attributeValues.put("created",new AttributeValue().withS(transaction.getCreated()));
-        attributeValues.put("id",new AttributeValue().withS(transaction.getId()));
-        attributeValues.put("state",new AttributeValue().withS(transaction.getState()));
-        attributeValues.put("amount",new AttributeValue().withN((String.valueOf(transaction.getAmount()))));
+        attributeValues.put("userId", new AttributeValue().withS(transaction.getUserId()));
+        attributeValues.put("created", new AttributeValue().withS(transaction.getCreated()));
+        attributeValues.put("id", new AttributeValue().withS(transaction.getId()));
+        attributeValues.put("state", new AttributeValue().withS(transaction.getState()));
+        attributeValues.put("amount", new AttributeValue().withN((String.valueOf(transaction.getAmount()))));
 
         putItemRequest.withTableName("transactions");
         putItemRequest.withItem(attributeValues);
 
-        return amazonDynamoDB.putItem(putItemRequest);
+        return new CompletablePromise<>(amazonDynamoDBAsync.putItemAsync(putItemRequest));
     }
 
-//    @Override
-//    public List<Transaction> queryUserTransactionsIndex(User user, String startDate, String endDate) {
-//        Map<String, String> expressionAttributesNames = new HashMap<>();
-//        expressionAttributesNames.put("#userId", "userId");
-//        expressionAttributesNames.put("#created", "created");
-//
-//        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
-//        expressionAttributeValues.put(":userId", new AttributeValue().withS(user.getId()));
-//        expressionAttributeValues.put(":currentDate", new AttributeValue().withS(endDate));
-//        expressionAttributeValues.put(":fiveDaysAgoDate", new AttributeValue().withS(startDate));
-//
-//        QueryRequest queryRequest = new QueryRequest()
-//                .withTableName("transactions")
-//                .withKeyConditionExpression("#userId = :userId and #created between :fiveDaysAgoDate and :currentDate ")
-//                .withIndexName("userTransactions-index")
-//                .withExpressionAttributeNames(expressionAttributesNames)
-//                .withExpressionAttributeValues(expressionAttributeValues);
-//
-//        Future<QueryResult> queryResult = amazonDynamoDBAsync.queryAsync(queryRequest);
-//
-//        List<Transaction> unmarshalledQueryResult = dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult);
-//
-//        return unmarshalledQueryResult;
-//    }
 
-//    @Override
-    public List<Transaction> queryUserTransactionsIndex(User user, String startDate, String endDate) {
+    public CompletableFuture<List<Transaction>> queryUserTransactionsIndex(User user, String startDate, String endDate) {
         Map<String, String> expressionAttributesNames = new HashMap<>();
         expressionAttributesNames.put("#userId", "userId");
         expressionAttributesNames.put("#created", "created");
@@ -169,19 +132,8 @@ public class TransactionRepository {
                 .withIndexName("userTransactions-index")
                 .withExpressionAttributeNames(expressionAttributesNames)
                 .withExpressionAttributeValues(expressionAttributeValues);
-
-//        Future<QueryResult> queryResult = amazonDynamoDBAsync.queryAsync(queryRequest);
-        QueryResult queryResult = amazonDynamoDB.query(queryRequest);
-        List<Transaction> unmarshalledQueryResult = dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult.getItems());
-
-//        try {
-//            unmarshalledQueryResult = dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult.get().getItems());
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        } catch (ExecutionException e) {
-//            e.printStackTrace();
-//        }
-
-        return unmarshalledQueryResult;
+        
+        return new CompletablePromise<>(amazonDynamoDBAsync.queryAsync(queryRequest)).thenApplyAsync(queryResult ->
+                dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult.getItems()));
     }
 }

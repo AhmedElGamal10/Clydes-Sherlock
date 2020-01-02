@@ -5,11 +5,9 @@ import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 public interface PersistenceManagementService {
-    PutItemResult save(Transaction transaction);
-    List<Transaction> getUserPotentialTransactions(User user);
+    CompletableFuture<PutItemResult> save(Transaction transaction);
+    CompletableFuture<List<Transaction>> getUserPotentialTransactions(User user);
 }

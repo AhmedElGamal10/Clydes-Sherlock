@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static com.example.demo.util.DateUtils.getCurrentDate;
 import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
@@ -19,12 +20,12 @@ public class PersistenceManagementServiceImpl implements PersistenceManagementSe
     TransactionRepository transactionRepository;
 
     @Override
-    public PutItemResult save(Transaction transaction) {
+    public CompletableFuture<PutItemResult> save(Transaction transaction) {
         return transactionRepository.save(transaction);
     }
 
     @Override
-    public List<Transaction> getUserPotentialTransactions(User user) {
+    public CompletableFuture<List<Transaction>> getUserPotentialTransactions(User user) {
         return transactionRepository.queryUserTransactionsIndex(user, getPastDateByDifferenceInDays(5), getCurrentDate());
     }
 }
