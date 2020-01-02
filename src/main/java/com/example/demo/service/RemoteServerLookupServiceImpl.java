@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static com.example.demo.util.DateUtils.getCurrentDate;
 import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
@@ -41,8 +42,10 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<User>> getSystemUsers() {
         rateLimiter.acquire();
+
         final String uri = "http://localhost:8081/clydescards.example.com/users";
         Request request = get(uri).build();
+
         return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseUsersResponse);
     }
 

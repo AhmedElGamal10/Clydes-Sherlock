@@ -33,8 +33,7 @@ public class AsyncEventsSystemRunner implements CommandLineRunner {
     @Override
     public void run(String... strings) throws Exception {
         while (true) {
-            List<User> users = remoteServerLookupService.getSystemUsers().get();
-            processUsersTransactions(users);
+            remoteServerLookupService.getSystemUsers().thenAcceptAsync(this::processUsersTransactions).get();
         }
     }
 
