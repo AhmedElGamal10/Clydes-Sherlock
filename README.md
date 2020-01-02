@@ -9,6 +9,7 @@ The technologies used to build the service include:
 - Spring Boot
 - Kafka
 - AWS (DynamoDB)
+- Maven
 
 ## Running the service
 To get the service running correctly, the user firstly must have the following up and running:
@@ -68,9 +69,12 @@ The system was designed to use asynchronous calls from start to beginning, as th
 
 So, this way, everything in the system works in an asynchronous fashion from end to end, without blocking for any call response.
 
-![system schema](https://drive.google.com/file/d/1STW7U58nZkJzkKoMgNo_qdusne1cyR39/view?fbclid=IwAR38CrX-onWvMWwTxy3pBUSQtqYrzQoTRRjAtZMymqP0MbJdxikg2SjX_iY)
+### Designing for reusability
+1- The service was designed so that it can be used as a connector to help in communication between Klar backend systems and other cards service providers (Clyde, Visa, ...etc), so this way, we can have multiple service providers connecting to the service and pushing transaction events to different Kafka topics.
 
-![system schema](SystemDesign.jpg)
+2- Another use case for this design is that it can be used to aggregate all transaction for a specific user, even if they are coming from different service providers, to push transaction events to a user-specific kafka topic. This way, the user can see all his transactions grouped in one place (one Kafka topic).   
+
+<img src="SystemDiagram.png">
 
 ### Database Table
 - The service uses only one table to save all the transactions associated with different users.
@@ -83,7 +87,7 @@ So, this way, everything in the system works in an asynchronous fashion from end
 
 - Database accessing methods were implemented to use asynchronous calls for both writing to and reading from the database table.
   
-### Exception Handling
+## Exception Handling
 - The application defines its custom exceptions for better exception handling by providing more useful information in the exception thrown, which, for now,  will fall into two categories: *4xx (Service Unavailable)* and *5xx (Internal Server Error -> Runtime Error)*.
 
 ## Endpoints
@@ -107,13 +111,20 @@ Path: http://localhost:8081/clydescards.example.com/users
 HTTP method: GET
 ```  
 
-#### Server API Swagger Documentation
+### Server API Swagger Documentation
+- Applied in fake server API, to document the exposed endpoints from the server.
 - Used **SpringFox** to generate API swagger documentation.
 - Overrided the default documentation path to be the one existing in *application.properties*. For example if it's */api/docs* and the port is __8081__, then the API documentation can be found at `http://localhost:8081/clydescards.example.com/api/docs` upon running the server application.    
       
 ## Testing
 - Used local testing by implementing test scenarios in the fake service and test Clyde's Sherlock behavior represented in the pushed events and made sure it pushes events as expected in both newly created transactions or the already existing ones, but getting updated.
 
+## What can go wrong?
+- In uncommon cases, a conflict in the maximum number of threads defined in Spring and Kafka may arise. For example, Kafka max no of threads may be much less than the value specified in Spring, so Spring won't be able to push to Kafka due to shortage of Kafka threads.  
+
 ## Design Decisions
 ### Using DynamoDB
 It uses key-value pairs, which applies very well to our use case here, where we can assign the primary key as the transaction id. Also, we could add global secondary index to query the DynamoDB table quickly getting the transactions associated with a specific user within a five-days-time-window.
+
+### Max number of threads in the ThreadPool
+As the number of maximum number of threads depends on the system load and network traffic between services, I left the no of threads set to the default value and it can be re-configured according to the use case.  
