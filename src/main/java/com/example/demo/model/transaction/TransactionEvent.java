@@ -23,20 +23,18 @@ public class TransactionEvent {
         this.eventTimeStamp = eventTimeStamp;
     }
 
-    public TRANSACTION_EVENT_TYPE getEventType() {
-        return eventType;
-    }
-
-    public void setEventType(TRANSACTION_EVENT_TYPE eventType) {
-        this.eventType = eventType;
-    }
-
     public String getEventTimeStamp() {
         return eventTimeStamp;
     }
-
     public void setEventTimeStamp(String eventTimeStamp) {
         this.eventTimeStamp = eventTimeStamp;
+    }
+
+    public TRANSACTION_EVENT_TYPE getEventType() {
+        return eventType;
+    }
+    public void setEventType(TRANSACTION_EVENT_TYPE eventType) {
+        this.eventType = eventType;
     }
 
     public void setUserId(String userId) {

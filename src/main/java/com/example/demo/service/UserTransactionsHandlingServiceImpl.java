@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -25,21 +25,16 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
     private EventSenderService eventSenderService;
 
     @Transactional
-    public void handleTransactionEvents(TransactionEvent transactionEvent) {
-        try {
-            transactionRepository.save(transactionEvent.getTransaction()).get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-
-        eventSenderService.sendEvent(transactionEvent);
+    public CompletableFuture<Void> handleTransactionEvents(TransactionEvent transactionEvent) {
+        return CompletableFuture.allOf(transactionRepository.save(transactionEvent.getTransaction()),
+                eventSenderService.sendEvent(transactionEvent));
     }
 
     public List<TransactionEvent> resolveConflicts(List<Transaction> remoteTransactions, List<Transaction> savedTransactions) {
         Map<String, Transaction> savedTransactionsMap = savedTransactions.stream().collect(Collectors.toMap(Transaction::getId, Function.identity()));
 
         return remoteTransactions.stream().filter(x -> !x.equals(savedTransactionsMap.getOrDefault(x.getId(), null)))
-                .map(x -> new TransactionEvent(x, savedTransactionsMap.containsKey(x.getId())? TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE : TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()))
+                .map(x -> new TransactionEvent(x, savedTransactionsMap.containsKey(x.getId()) ? TransactionEvent.TRANSACTION_EVENT_TYPE.UPDATE : TransactionEvent.TRANSACTION_EVENT_TYPE.CREATE, getCurrentDate()))
                 .collect(Collectors.toList());
     }
 }

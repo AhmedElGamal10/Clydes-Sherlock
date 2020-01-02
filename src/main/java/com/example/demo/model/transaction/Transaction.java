@@ -1,7 +1,6 @@
 package com.example.demo.model.transaction;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
-import com.example.demo.model.user.UserTransactionsIndexKey;
 
 @DynamoDBTable(tableName = "transactions")
 public class Transaction {
@@ -10,9 +9,8 @@ public class Transaction {
     private String id;
     private String userId;
     private String created;
-
-    private Double amount;
     private String state;
+    private Double amount;
 
     public Transaction() {
     }
@@ -34,32 +32,20 @@ public class Transaction {
         this.id = id;
     }
 
-//    @DynamoDBIndexHashKey(globalSecondaryIndexName = "userTransactions-index")
     public String getUserId() {
         return userId;
-//        return userTransactionsIndexKey != null ? userTransactionsIndexKey.getTransactionUserId() : null;
     }
 
     public void setUserId(String userId) {
         this.userId = userId;
-//        if (userTransactionsIndexKey == null) {
-//            userTransactionsIndexKey = new UserTransactionsIndexKey();
-//        }
-//        userTransactionsIndexKey.setTransactionUserId(userId);
     }
 
-//    @DynamoDBIndexRangeKey(globalSecondaryIndexName = "userTransactions-index")
     public String getCreated() {
         return created;
-//        return userTransactionsIndexKey != null ? userTransactionsIndexKey.getCreatedDate() : null;
     }
 
     public void setCreated(String created) {
         this.created = created;
-//        if (userTransactionsIndexKey == null) {
-//            userTransactionsIndexKey = new UserTransactionsIndexKey();
-//        }
-//        userTransactionsIndexKey.setCreatedDate(created);
     }
 
     @DynamoDBAttribute(attributeName = "state")
@@ -80,7 +66,7 @@ public class Transaction {
         this.amount = amount;
     }
 
-//    @Override
+    @Override
     public boolean equals(Object o) {
         if (o == null) {
             return false;

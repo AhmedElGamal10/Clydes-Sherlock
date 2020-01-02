@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Component
 public class AsyncEventsSystemRunner implements CommandLineRunner {
@@ -31,26 +31,24 @@ public class AsyncEventsSystemRunner implements CommandLineRunner {
     private PersistenceManagementService persistenceManagementService;
 
     @Override
-    public void run(String... strings) throws Exception {
+    public void run(String... strings) {
         while (true) {
-            remoteServerLookupService.getSystemUsers().thenAcceptAsync(this::processUsersTransactions).get();
+            remoteServerLookupService.getSystemUsers().thenCompose(this::processUsersTransactions).join();
         }
     }
 
-    private void processUsersTransactions(List<User> users) {
-        users.stream().forEach(this::processUserTransactions);
+    private CompletableFuture<Void> processUsersTransactions(List<User> users) {
+        List<CompletableFuture<Void>> futures = users.stream().map(this::processUserTransactions).collect(Collectors.toList());
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
     }
 
-    private void processUserTransactions(User user) {
-        try {
-            fetchAllTransactionEventsForUser(user).get()
-                    .stream().peek(x -> x.setUserId(user.getId()))
-                    .forEach(userTransactionsHandlingService::handleTransactionEvents);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        }
+    private CompletableFuture<Void> processUserTransactions(User user) {
+        return fetchAllTransactionEventsForUser(user).thenCompose(events -> {
+                    List<CompletableFuture<Void>> futures = events.stream().peek(x -> x.setUserId(user.getId()))
+                            .map(userTransactionsHandlingService::handleTransactionEvents).collect(Collectors.toList());
+                    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+                }
+        );
     }
 
     private CompletableFuture<List<TransactionEvent>> fetchAllTransactionEventsForUser(User user) {

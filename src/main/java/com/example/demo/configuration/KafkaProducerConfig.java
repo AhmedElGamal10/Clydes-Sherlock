@@ -1,7 +1,8 @@
 package com.example.demo.configuration;
 
 import com.example.demo.model.transaction.TransactionEvent;
-import com.example.demo.service.Producer;
+import com.example.demo.service.EventSenderService;
+import com.example.demo.service.EventSenderServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -49,7 +50,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public Producer producer() {
-        return new Producer();
+    public EventSenderService eventSenderService() {
+        return new EventSenderServiceImpl();
     }
 }

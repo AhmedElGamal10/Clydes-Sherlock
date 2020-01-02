@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
-import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.transaction.TransactionEvent;
+import com.example.demo.util.CompletablePromise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +12,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
+
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class EventSenderServiceImpl implements EventSenderService {
@@ -25,9 +27,9 @@ public class EventSenderServiceImpl implements EventSenderService {
     private KafkaTemplate<String, TransactionEvent> kafkaTemplate;
 
     @Async
-    public void sendEvent(TransactionEvent transactionEvent) {
-        ListenableFuture<SendResult<String, TransactionEvent>> future = kafkaTemplate.send(topic, transactionEvent);
-        future.addCallback(new ListenableFutureCallback<SendResult<String, TransactionEvent>>() {
+    public CompletableFuture<SendResult<String, TransactionEvent>> sendEvent(TransactionEvent transactionEvent) {
+        ListenableFuture<SendResult<String, TransactionEvent>> sendTransactionEvent = kafkaTemplate.send(topic, transactionEvent);
+        sendTransactionEvent.addCallback(new ListenableFutureCallback<SendResult<String, TransactionEvent>>() {
 
             @Override
             public void onSuccess(final SendResult<String, TransactionEvent> message) {
@@ -39,5 +41,7 @@ public class EventSenderServiceImpl implements EventSenderService {
                 LOGGER.error("unable to send message= " + transactionEvent.toString(), throwable);
             }
         });
+
+        return new CompletablePromise<>(sendTransactionEvent);
     }
 }

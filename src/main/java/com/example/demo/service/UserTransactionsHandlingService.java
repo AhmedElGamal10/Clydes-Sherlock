@@ -4,8 +4,9 @@ import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.transaction.TransactionEvent;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface UserTransactionsHandlingService {
     List<TransactionEvent> resolveConflicts(List<Transaction> remoteTransactions, List<Transaction> savedTransactions);
-    void handleTransactionEvents(TransactionEvent transactionEvent);
+    CompletableFuture<Void> handleTransactionEvents(TransactionEvent transactionEvent);
 }
