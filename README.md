@@ -71,7 +71,7 @@ So, this way, everything in the system works in an asynchronous fashion from end
 <img src="https://drive.google.com/file/d/1STW7U58nZkJzkKoMgNo_qdusne1cyR39/view?fbclid=IwAR38CrX-onWvMWwTxy3pBUSQtqYrzQoTRRjAtZMymqP0MbJdxikg2SjX_iY" width="500">
 
 
-<img src="SystemDiagram.jpg">
+<img src="SystemDiagram.png">
 
 ### Database Table
 - The service uses only one table to save all the transactions associated with different users.
