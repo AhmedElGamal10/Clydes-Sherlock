@@ -1,4 +1,4 @@
-package com.example.demo.service;
-
-public class SpringKafkaSenderTest {
-}
+//package com.example.demo.service;
+//
+//public class SpringKafkaSenderTest {
+//}
