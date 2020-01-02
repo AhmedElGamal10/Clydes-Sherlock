@@ -5,6 +5,10 @@ public class TransactionEvent {
         CREATE, UPDATE
     }
 
+    Transaction transaction;
+    String eventTimeStamp;
+    TRANSACTION_EVENT_TYPE eventType;
+
     public Transaction getTransaction() {
         return transaction;
     }
@@ -12,10 +16,6 @@ public class TransactionEvent {
     public void setTransaction(Transaction transaction) {
         this.transaction = transaction;
     }
-
-    Transaction transaction;
-    TRANSACTION_EVENT_TYPE eventType;
-    String eventTimeStamp;
 
     public TransactionEvent(Transaction transaction, TRANSACTION_EVENT_TYPE eventType, String eventTimeStamp) {
         this.transaction = transaction;

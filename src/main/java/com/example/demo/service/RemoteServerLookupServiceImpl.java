@@ -1,7 +1,5 @@
 package com.example.demo.service;
 
-import com.example.demo.AsyncEventsSystemRunner;
-import com.example.demo.exception.RemoteServiceUnavailableException;
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.user.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -11,18 +9,12 @@ import com.google.common.util.concurrent.RateLimiter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.*;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static com.example.demo.util.DateUtils.getCurrentDate;
 import static com.example.demo.util.DateUtils.getPastDateByDifferenceInDays;
@@ -30,7 +22,7 @@ import static org.asynchttpclient.Dsl.*;
 
 @Service
 public class RemoteServerLookupServiceImpl implements RemoteServerLookupService {
-    private static final Logger LOGGER = LogManager.getLogger(EventSenderServiceImpl.class);
+    private static final Logger LOGGER = LogManager.getLogger(RemoteServerLookupService.class);
 
     RateLimiter rateLimiter = RateLimiter.create(200);
     AsyncHttpClient asyncHttpClient = asyncHttpClient();

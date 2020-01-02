@@ -2,8 +2,6 @@ package com.example.demo.service;
 
 import com.example.demo.model.transaction.Transaction;
 import com.example.demo.model.transaction.TransactionEvent;
-//import com.example.demo.repository.CustomTransactionRepository;
-//import com.example.demo.repository.TransactionRepository;
 import com.example.demo.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,18 +22,17 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
     private TransactionRepository transactionRepository;
 
     @Autowired
-    private EventSenderServiceImpl eventSenderServiceImpl;
+    private EventSenderService eventSenderService;
 
     @Transactional
     public void handleTransactionEvents(TransactionEvent transactionEvent) {
         try {
             transactionRepository.save(transactionEvent.getTransaction()).get();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
-        eventSenderServiceImpl.sendEvent(transactionEvent);
+
+        eventSenderService.sendEvent(transactionEvent);
     }
 
     public List<TransactionEvent> resolveConflicts(List<Transaction> remoteTransactions, List<Transaction> savedTransactions) {
