@@ -1,11 +1,11 @@
 package com.klar.sherlock.service;
 
-import com.klar.sherlock.model.transaction.Transaction;
-import com.klar.sherlock.model.user.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.RateLimiter;
+import com.klar.sherlock.model.transaction.Transaction;
+import com.klar.sherlock.model.user.User;
 import com.klar.sherlock.util.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,7 +41,6 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
         rateLimiter.acquire();
         final String uri = remoteServiceUri + "/users";
         Request request = get(uri).build();
-
         return asyncHttpClient.executeRequest(request).toCompletableFuture().thenApply(this::parseUsersResponse);
     }
 

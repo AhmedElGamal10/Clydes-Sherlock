@@ -1,9 +1,9 @@
 package com.klar.sherlock.configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.klar.sherlock.model.transaction.TransactionEvent;
 import com.klar.sherlock.service.EventSenderService;
 import com.klar.sherlock.service.EventSenderServiceImpl;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;

@@ -14,17 +14,6 @@ public class Transaction {
     private String state;
     private Double amount;
 
-    public Transaction() {
-    }
-
-    public Transaction(Transaction transaction) {
-        this.amount = transaction.getAmount();
-        this.state = transaction.getState();
-        this.id = transaction.getId();
-        this.userId = (transaction.getUserId());
-        this.created = (transaction.getCreated());
-    }
-
     @DynamoDBHashKey
     public String getId() {
         return id;
