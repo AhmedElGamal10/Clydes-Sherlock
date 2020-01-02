@@ -39,6 +39,8 @@ java -Xmx100m -jar target/conichi-challenge-0.0.1-SNAPSHOT.jar com.conichi.conic
 
 ![system schema](https://drive.google.com/file/d/1STW7U58nZkJzkKoMgNo_qdusne1cyR39/view?fbclid=IwAR38CrX-onWvMWwTxy3pBUSQtqYrzQoTRRjAtZMymqP0MbJdxikg2SjX_iY)
 
+![system schema](SystemDesign.jpg)
+
 ### Exception Handling
 - The application defines its custom exceptions for better exception handling, which, for now,  will fall into two categories: *4xx (Service Unavailable)* and *5xx*.
 
