@@ -24,7 +24,7 @@ import static org.asynchttpclient.Dsl.*;
 public class RemoteServerLookupServiceImpl implements RemoteServerLookupService {
     private static final Logger LOGGER = LogManager.getLogger(RemoteServerLookupService.class);
 
-    RateLimiter rateLimiter = RateLimiter.create(200);
+    RateLimiter rateLimiter = RateLimiter.create(2);
     AsyncHttpClient asyncHttpClient = asyncHttpClient();
 
     AsyncHttpClient client = asyncHttpClient(config().setProxyServer(proxyServer("127.0.0.1", 38080)));
@@ -34,7 +34,6 @@ public class RemoteServerLookupServiceImpl implements RemoteServerLookupService 
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<List<User>> getSystemUsers() {
         rateLimiter.acquire();
-
         final String uri = "http://localhost:8081/clydescards.example.com/users";
         Request request = get(uri).build();
 

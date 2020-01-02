@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @Repository
 public class TransactionRepository {
@@ -132,7 +131,7 @@ public class TransactionRepository {
                 .withIndexName("userTransactions-index")
                 .withExpressionAttributeNames(expressionAttributesNames)
                 .withExpressionAttributeValues(expressionAttributeValues);
-        
+
         return new CompletablePromise<>(amazonDynamoDBAsync.queryAsync(queryRequest)).thenApplyAsync(queryResult ->
                 dynamoDBMapper.marshallIntoObjects(Transaction.class, queryResult.getItems()));
     }

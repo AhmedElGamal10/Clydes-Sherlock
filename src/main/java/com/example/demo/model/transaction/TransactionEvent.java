@@ -1,5 +1,7 @@
 package com.example.demo.model.transaction;
 
+import com.example.demo.util.ServiceProvider;
+
 public class TransactionEvent {
     public static enum TRANSACTION_EVENT_TYPE {
         CREATE, UPDATE
@@ -8,6 +10,7 @@ public class TransactionEvent {
     Transaction transaction;
     String eventTimeStamp;
     TRANSACTION_EVENT_TYPE eventType;
+    private static final ServiceProvider SERVICE_PROVIDER = ServiceProvider.CLYDE;
 
     public Transaction getTransaction() {
         return transaction;
@@ -43,6 +46,6 @@ public class TransactionEvent {
 
     @Override
     public String toString() {
-        return "Transaction [userId=" + transaction.getUserId() + ", id=" + transaction.getId() + ", amount=" + transaction.getAmount() + ", state=" + transaction.getState() + ", created=" + transaction.getCreated() + ", eventType=" + eventType + ", eventTimeStamp=" + eventTimeStamp +"]";
+        return "Transaction [userId=" + transaction.getUserId() + ", id=" + transaction.getId() + ", amount=" + transaction.getAmount() + ", state=" + transaction.getState() + ", created=" + transaction.getCreated() + ", eventType=" + eventType + ", eventTimeStamp=" + eventTimeStamp + ", serviceProvider=" + SERVICE_PROVIDER + "]";
     }
 }
