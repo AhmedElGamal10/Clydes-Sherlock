@@ -68,9 +68,10 @@ The system was designed to use asynchronous calls from start to beginning, as th
 
 So, this way, everything in the system works in an asynchronous fashion from end to end, without blocking for any call response.
 
-![system schema](https://drive.google.com/file/d/1STW7U58nZkJzkKoMgNo_qdusne1cyR39/view?fbclid=IwAR38CrX-onWvMWwTxy3pBUSQtqYrzQoTRRjAtZMymqP0MbJdxikg2SjX_iY)
+<img src="https://drive.google.com/file/d/1STW7U58nZkJzkKoMgNo_qdusne1cyR39/view?fbclid=IwAR38CrX-onWvMWwTxy3pBUSQtqYrzQoTRRjAtZMymqP0MbJdxikg2SjX_iY" width="500">
 
-![system schema](SystemDesign.jpg)
+
+<img src="SystemDiagram.jpg">
 
 ### Database Table
 - The service uses only one table to save all the transactions associated with different users.
