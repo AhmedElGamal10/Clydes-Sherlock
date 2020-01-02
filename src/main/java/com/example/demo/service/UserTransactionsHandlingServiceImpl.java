@@ -28,6 +28,7 @@ public class UserTransactionsHandlingServiceImpl implements UserTransactionsHand
     @Transactional
     public void handleTransactionEvents(TransactionEvent transactionEvent) {
         transactionRepository.save(transactionEvent.getTransaction());
+        System.out.println("id: " + transactionEvent.getTransaction().getId() + "\ttype: " + transactionEvent.getEventType());
         eventSenderServiceImpl.sendEvent(transactionEvent);
     }
 

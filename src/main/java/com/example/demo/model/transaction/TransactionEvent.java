@@ -42,6 +42,7 @@ public class TransactionEvent {
     public void setUserId(String userId) {
         this.transaction.setUserId(userId);
     }
+
     @Override
     public String toString() {
         return "Transaction [userId=" + transaction.getUserId() + ", id=" + transaction.getId() + ", amount=" + transaction.getAmount() + ", state=" + transaction.getState() + ", created=" + transaction.getCreated() + ", eventType=" + eventType + ", eventTimeStamp=" + eventTimeStamp +"]";
