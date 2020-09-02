@@ -8,7 +8,7 @@
 		<version>2.2.2.RELEASE</version>
 		<relativePath/>
 	</parent>
-	<groupId>com.klar</groupId>
+	<groupId>com.clydes</groupId>
 	<artifactId>sherlock</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>sherlock</name>
@@ -66,7 +66,7 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>22.0</version>
+			<version>28.2-jre</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.kafka</groupId>

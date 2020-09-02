@@ -52,7 +52,7 @@ User shall follow the next steps to get the service running:
 
 5. Run Sherlock service:
     - Clone service repo: `git clone https://github.com/AhmedElGamal10/async-events-system.git`
-    - navigate to the repo directory  and run the following command: `mvn clean package && java -Xmx100m -jar target/sherlock-0.0.1-SNAPSHOT.jar com.klar.sherlock.Application`
+    - navigate to the repo directory  and run the following command: `mvn clean package && java -Xmx100m -jar target/sherlock-0.0.1-SNAPSHOT.jar Application`
 
 
 ## Design
